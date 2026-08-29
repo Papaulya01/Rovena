@@ -1,0 +1,88 @@
+import { useEffect, useState } from 'react'
+
+const WEEKDAYS_RU = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']
+const MONTHS_RU = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря'
+]
+
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+
+function partsInZone(timeZone) {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      weekday: 'short'
+    })
+    const parts = {}
+    for (const p of dtf.formatToParts(new Date())) parts[p.type] = p.value
+    const weekdayIndex = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday)
+    return {
+      year: Number(parts.year),
+      month: Number(parts.month),
+      day: Number(parts.day),
+      hour: parts.hour === '24' ? 0 : Number(parts.hour),
+      minute: Number(parts.minute),
+      second: Number(parts.second),
+      weekdayIndex: weekdayIndex >= 0 ? weekdayIndex : new Date().getDay()
+    }
+  } catch {
+    const d = new Date()
+    return {
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      day: d.getDate(),
+      hour: d.getHours(),
+      minute: d.getMinutes(),
+      second: d.getSeconds(),
+      weekdayIndex: d.getDay()
+    }
+  }
+}
+
+/** Живые часы с датой — используют часовой пояс/формат из региональных настроек заведения. */
+export default function LiveClock({ timezone = 'Asia/Tashkent', timeFormat = '24h', className = '' }) {
+  const [now, setNow] = useState(() => partsInZone(timezone))
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(partsInZone(timezone)), 1000)
+    return () => clearInterval(interval)
+  }, [timezone])
+
+  let hour = now.hour
+  let suffix = ''
+  if (timeFormat === '12h') {
+    suffix = hour >= 12 ? ' PM' : ' AM'
+    hour = hour % 12
+    if (hour === 0) hour = 12
+  }
+
+  const timeStr = `${pad2(hour)}:${pad2(now.minute)}:${pad2(now.second)}${suffix}`
+  const dateStr = `${WEEKDAYS_RU[now.weekdayIndex]}, ${now.day} ${MONTHS_RU[now.month - 1]} ${now.year}`
+
+  return (
+    <div className={`live-clock ${className}`}>
+      <span className="live-clock-time">{timeStr}</span>
+      <span className="live-clock-date">{dateStr}</span>
+    </div>
+  )
+}

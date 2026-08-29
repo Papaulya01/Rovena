@@ -1,0 +1,16 @@
+appId: com.rovena.crm
+productName: Rovena-CRM
+directories:
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - '**/*.node'
+win:
+  target: nsis
+linux:
+  target: AppImage
+  category: Office
+mac:
+  target: dmg

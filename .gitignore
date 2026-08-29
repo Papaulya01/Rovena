@@ -1,0 +1,26 @@
+# Зависимости и артефакты сборки
+node_modules/
+rovena-crm/out/
+rovena-crm/dist/
+rovena-crm/release/
+
+# Локальное состояние сессий/агента — не часть проекта
+.claude/scheduled_tasks.lock
+
+# Логи
+*.log
+npm-debug.log*
+
+# Локальные БД на всякий случай (в норме живут в %APPDATA%, не в репозитории)
+*.db
+*.db-journal
+*.sqlite
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Секреты — токены/ключи никогда не коммитим
+.env
+.env.local
+*.pat
