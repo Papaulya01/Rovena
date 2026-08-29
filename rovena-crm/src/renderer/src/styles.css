@@ -944,12 +944,6 @@ input[type='radio']:disabled {
   color: var(--sidebar-ink-dim);
 }
 
-.cashier-topbar .lang-switcher {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.16);
-  color: var(--sidebar-ink-dim);
-}
-
 .cashier-topbar .logout-link:hover {
   color: var(--sidebar-ink);
 }
@@ -1473,6 +1467,10 @@ input[type='radio']:disabled {
   border-bottom: 1px solid var(--line);
 }
 
+.section-toggles {
+  margin-bottom: 16px;
+}
+
 .report-logo {
   max-width: 72px;
   max-height: 72px;
@@ -1556,23 +1554,19 @@ input[type='radio']:disabled {
   transition: width 0.2s;
 }
 
-/* ---------- Переключатель языка ---------- */
+/* ---------- Переключатель языка (использует общий custom-select) ---------- */
 
-.lang-switcher {
-  font-family: var(--font-body);
+.lang-switcher .custom-select-trigger {
   font-size: 11.5px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-soft);
-  cursor: pointer;
+  padding: 5px 26px 5px 8px;
+  background-position: right 8px center;
 }
 
 .lang-switcher-login {
   position: absolute;
   top: 20px;
   right: 20px;
+  width: 168px;
 }
 
 .auth-card {
@@ -1581,8 +1575,14 @@ input[type='radio']:disabled {
 
 .sidebar .lang-switcher {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.sidebar .lang-switcher .custom-select-trigger,
+.cashier-topbar .lang-switcher .custom-select-trigger {
+  background: rgba(255, 255, 255, 0.06)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238ea198' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 8px center;
+  border-color: rgba(255, 255, 255, 0.16);
   color: var(--sidebar-ink-dim);
 }
 

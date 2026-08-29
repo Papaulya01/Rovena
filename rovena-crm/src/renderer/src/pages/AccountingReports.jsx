@@ -8,8 +8,16 @@ const REPORT_TYPES = [
   { value: 'cash', label: 'Кассовый отчёт (по сменам)' },
   { value: 'tax', label: 'Налоговый расчёт' },
   { value: 'payroll', label: 'ФОТ и налоги с зарплаты' },
-  { value: 'summary', label: 'Сводный отчёт' }
+  { value: 'summary', label: 'Сводный отчёт' },
+  { value: 'full', label: 'Полная бухгалтерия (конструктор)' }
 ]
+
+const SECTION_LABELS = {
+  pnl: 'Доходы и расходы',
+  cash: 'Кассовый отчёт по сменам',
+  tax: 'Налоговый расчёт',
+  payroll: 'ФОТ и налоги с зарплаты'
+}
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -43,6 +51,20 @@ function hoursBetween(start, end) {
   let mins = eh * 60 + em - (sh * 60 + sm)
   if (mins < 0) mins += 24 * 60
   return mins / 60
+}
+
+function regimeTaxLabel(taxSettings) {
+  if (taxSettings?.tax_regime === 'vat') return `НДС к уплате (${taxSettings?.vat_rate || 0}%)`
+  return `ЕНП к уплате (${taxSettings?.turnover_tax_rate || 0}%)`
+}
+function profitTaxLabel(taxSettings) {
+  return `Налог на прибыль (${taxSettings?.profit_tax_rate || 0}%)`
+}
+function socialTaxLabel(taxSettings) {
+  return `Социальный налог, работодатель (${taxSettings?.social_tax_rate || 0}%)`
+}
+function ndflLabel(taxSettings) {
+  return `НДФЛ к удержанию из зарплаты (${taxSettings?.ndfl_rate || 0}%)`
 }
 
 const SALARY_LABELS = { fixed: 'оклад', hourly: 'почасовая', percent: '% с продаж' }
@@ -84,6 +106,14 @@ export function ReportsTab() {
   const [scheduleEntries, setScheduleEntries] = useState([])
   const [taxSettings, setTaxSettings] = useState(null)
   const [session, setSession] = useState(null)
+  const [sections, setSections] = useState({ pnl: true, cash: true, tax: true, payroll: true })
+
+  function toggleSection(key) {
+    setSections((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+  function showSection(key) {
+    return reportType === key || (reportType === 'full' && sections[key])
+  }
 
   useEffect(() => {
     window.rovena.finance.list().then(setEntries)
@@ -102,7 +132,8 @@ export function ReportsTab() {
   const shiftIdsKey = filteredShifts.map((s) => s.id).join(',')
 
   useEffect(() => {
-    if (reportType !== 'cash' || filteredShifts.length === 0) return
+    const needsShiftReports = reportType === 'cash' || (reportType === 'full' && sections.cash)
+    if (!needsShiftReports || filteredShifts.length === 0) return
     Promise.all(filteredShifts.map((s) => window.rovena.shift.report(s.id))).then((reports) => {
       const map = {}
       filteredShifts.forEach((s, i) => {
@@ -111,7 +142,7 @@ export function ReportsTab() {
       setShiftReports(map)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportType, shiftIdsKey])
+  }, [reportType, shiftIdsKey, sections.cash])
 
   const income = filteredEntries.filter((e) => e.type === 'income')
   const expense = filteredEntries.filter((e) => e.type === 'expense')
@@ -181,8 +212,8 @@ export function ReportsTab() {
         ['Выручка за период', totalIncome],
         ['Расходы за период', totalExpense],
         ['Прибыль за период', netProfit],
-        [taxSettings?.tax_regime === 'vat' ? 'НДС к уплате (расчёт)' : 'ЕНП к уплате (расчёт)', regimeTaxDue],
-        ['Налог на прибыль (расчёт)', profitTaxDue]
+        [regimeTaxLabel(taxSettings), regimeTaxDue],
+        [profitTaxLabel(taxSettings), profitTaxDue]
       ]
       await saveCsv(`${fileBase}.csv`, ['Показатель', 'Сумма'], rows)
     } else if (reportType === 'payroll') {
@@ -194,18 +225,18 @@ export function ReportsTab() {
         r.base
       ])
       rows.push(['Итого ФОТ', '', '', '', totalPayroll])
-      rows.push(['Социальный налог (расчёт)', '', '', '', socialTaxDue])
-      rows.push(['НДФЛ к удержанию (расчёт)', '', '', '', ndflWithheld])
+      rows.push([socialTaxLabel(taxSettings), '', '', '', socialTaxDue])
+      rows.push([ndflLabel(taxSettings), '', '', '', ndflWithheld])
       await saveCsv(`${fileBase}.csv`, ['Сотрудник', 'Должность', 'Тип оплаты', 'Расчёт', 'Сумма'], rows)
-    } else if (reportType === 'summary') {
+    } else if (reportType === 'summary' || reportType === 'full') {
       const rows = [
         ['Выручка', totalIncome],
         ['Расходы', totalExpense],
         ['Чистая прибыль', netProfit],
         ['ФОТ (начислено)', totalPayroll],
-        ['Социальный налог (расчёт)', socialTaxDue],
-        ['Налог с оборота/НДС (расчёт)', regimeTaxDue],
-        ['Налог на прибыль (расчёт)', profitTaxDue]
+        [socialTaxLabel(taxSettings), socialTaxDue],
+        [regimeTaxLabel(taxSettings), regimeTaxDue],
+        [profitTaxLabel(taxSettings), profitTaxDue]
       ]
       await saveCsv(`${fileBase}.csv`, ['Показатель', 'Сумма'], rows)
     }
@@ -236,6 +267,20 @@ export function ReportsTab() {
         </div>
       </div>
 
+      {reportType === 'full' && (
+        <div className="card section-toggles">
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Разделы в отчёте</label>
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+            {Object.entries(SECTION_LABELS).map(([key, label]) => (
+              <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 400 }}>
+                <input type="checkbox" checked={sections[key]} onChange={() => toggleSection(key)} />
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="card report-printable">
         <ReportHeader
           title={REPORT_TYPES.find((r) => r.value === reportType)?.label}
@@ -245,8 +290,9 @@ export function ReportsTab() {
           generatedBy={session?.displayName}
         />
 
-        {reportType === 'pnl' && (
+        {showSection('pnl') && (
           <>
+            {reportType === 'full' && <h3>{SECTION_LABELS.pnl}</h3>}
             <div className="grid cols-3" style={{ marginBottom: 20 }}>
               <div className="card stat-card">
                 <div className="label">Доход</div>
@@ -282,25 +328,29 @@ export function ReportsTab() {
           </>
         )}
 
-        {reportType === 'cash' && (
-          <ReportTable
-            rows={filteredShifts.map((s) => ({ ...s, report: shiftReports[s.id] }))}
-            columns={[
-              { key: 'id', label: '№' },
-              { key: 'opened_at', label: 'Открыта', format: formatDateTime },
-              { key: 'closed_at', label: 'Закрыта', format: (v) => (v ? formatDateTime(v) : '—') },
-              { key: 'opened_by_name', label: 'Кассир' },
-              { key: 'starting_cash', label: 'Касса на начало', format: formatMoney },
-              { key: 'ending_cash', label: 'Касса на конец', format: (v) => (v == null ? '—' : formatMoney(v)) },
-              { key: 'report', label: 'Заказов', format: (v) => (v ? v.ordersCount : '…') },
-              { key: 'report', label: 'Сумма продаж', format: (v) => (v ? formatMoney(v.total) : '…') }
-            ]}
-            empty="Смен за период нет"
-          />
+        {showSection('cash') && (
+          <>
+            {reportType === 'full' && <h3>{SECTION_LABELS.cash}</h3>}
+            <ReportTable
+              rows={filteredShifts.map((s) => ({ ...s, report: shiftReports[s.id] }))}
+              columns={[
+                { key: 'id', label: '№' },
+                { key: 'opened_at', label: 'Открыта', format: formatDateTime },
+                { key: 'closed_at', label: 'Закрыта', format: (v) => (v ? formatDateTime(v) : '—') },
+                { key: 'opened_by_name', label: 'Кассир' },
+                { key: 'starting_cash', label: 'Касса на начало', format: formatMoney },
+                { key: 'ending_cash', label: 'Касса на конец', format: (v) => (v == null ? '—' : formatMoney(v)) },
+                { key: 'report', label: 'Заказов', format: (v) => (v ? v.ordersCount : '…') },
+                { key: 'report', label: 'Сумма продаж', format: (v) => (v ? formatMoney(v.total) : '…') }
+              ]}
+              empty="Смен за период нет"
+            />
+          </>
         )}
 
-        {reportType === 'tax' && (
+        {showSection('tax') && (
           <>
+            {reportType === 'full' && <h3>{SECTION_LABELS.tax}</h3>}
             <div className="instructions" style={{ marginBottom: 16 }}>
               Это внутренний предварительный расчёт по ставкам, указанным в разделе «Налоги и документация», а
               не официальная налоговая декларация. Сверяйте фактические ставки и формы отчётности с soliq.uz
@@ -311,11 +361,8 @@ export function ReportsTab() {
                 { label: 'Выручка за период', value: totalIncome },
                 { label: 'Расходы за период', value: totalExpense },
                 { label: 'Прибыль за период', value: netProfit },
-                {
-                  label: taxSettings?.tax_regime === 'vat' ? 'НДС к уплате (расчёт)' : 'ЕНП к уплате (расчёт)',
-                  value: regimeTaxDue
-                },
-                { label: 'Налог на прибыль (расчёт)', value: profitTaxDue }
+                { label: regimeTaxLabel(taxSettings), value: regimeTaxDue },
+                { label: profitTaxLabel(taxSettings), value: profitTaxDue }
               ]}
               columns={[
                 { key: 'label', label: 'Показатель' },
@@ -325,8 +372,9 @@ export function ReportsTab() {
           </>
         )}
 
-        {reportType === 'payroll' && (
+        {showSection('payroll') && (
           <>
+            {reportType === 'full' && <h3>{SECTION_LABELS.payroll}</h3>}
             <ReportTable
               rows={payrollRows}
               columns={[
@@ -345,8 +393,8 @@ export function ReportsTab() {
             <ReportTable
               rows={[
                 { label: 'Итого ФОТ (начислено)', value: totalPayroll },
-                { label: 'Социальный налог, работодатель (расчёт)', value: socialTaxDue },
-                { label: 'НДФЛ к удержанию из зарплаты (расчёт)', value: ndflWithheld }
+                { label: socialTaxLabel(taxSettings), value: socialTaxDue },
+                { label: ndflLabel(taxSettings), value: ndflWithheld }
               ]}
               columns={[
                 { key: 'label', label: 'Показатель' },
@@ -363,18 +411,36 @@ export function ReportsTab() {
               { label: 'Расходы', value: totalExpense },
               { label: 'Чистая прибыль', value: netProfit },
               { label: 'ФОТ (начислено)', value: totalPayroll },
-              { label: 'Социальный налог (расчёт)', value: socialTaxDue },
-              {
-                label: taxSettings?.tax_regime === 'vat' ? 'НДС (расчёт)' : 'Налог с оборота, ЕНП (расчёт)',
-                value: regimeTaxDue
-              },
-              { label: 'Налог на прибыль (расчёт)', value: profitTaxDue }
+              { label: socialTaxLabel(taxSettings), value: socialTaxDue },
+              { label: regimeTaxLabel(taxSettings), value: regimeTaxDue },
+              { label: profitTaxLabel(taxSettings), value: profitTaxDue }
             ]}
             columns={[
               { key: 'label', label: 'Показатель' },
               { key: 'value', label: 'Сумма', format: formatMoney }
             ]}
           />
+        )}
+
+        {reportType === 'full' && (
+          <>
+            <h3>Итоговая сводка</h3>
+            <ReportTable
+              rows={[
+                { label: 'Выручка', value: totalIncome },
+                { label: 'Расходы', value: totalExpense },
+                { label: 'Чистая прибыль', value: netProfit },
+                { label: 'ФОТ (начислено)', value: totalPayroll },
+                { label: socialTaxLabel(taxSettings), value: socialTaxDue },
+                { label: regimeTaxLabel(taxSettings), value: regimeTaxDue },
+                { label: profitTaxLabel(taxSettings), value: profitTaxDue }
+              ]}
+              columns={[
+                { key: 'label', label: 'Показатель' },
+                { key: 'value', label: 'Сумма', format: formatMoney }
+              ]}
+            />
+          </>
         )}
       </div>
     </div>

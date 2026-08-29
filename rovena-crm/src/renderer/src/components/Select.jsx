@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
  * стилизовать через CSS. Этот компонент — полная замена: сам рендерит и
  * закрытое поле, и выпадающий список, под общий дизайн приложения.
  */
-export default function Select({ value, onChange, options, placeholder, disabled, style }) {
+export default function Select({ value, onChange, options, placeholder, disabled, style, className = '' }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
@@ -28,7 +28,7 @@ export default function Select({ value, onChange, options, placeholder, disabled
   const current = options.find((o) => String(o.value) === String(value))
 
   return (
-    <div className={`custom-select${open ? ' open' : ''}`} ref={rootRef} style={style}>
+    <div className={`custom-select${open ? ' open' : ''} ${className}`} ref={rootRef} style={style}>
       <button
         type="button"
         className="custom-select-trigger"
