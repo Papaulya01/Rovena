@@ -1,20 +1,5 @@
 import { useEffect, useState } from 'react'
-
-const WEEKDAYS_RU = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']
-const MONTHS_RU = [
-  'января',
-  'февраля',
-  'марта',
-  'апреля',
-  'мая',
-  'июня',
-  'июля',
-  'августа',
-  'сентября',
-  'октября',
-  'ноября',
-  'декабря'
-]
+import { useI18n } from '../i18n/index.jsx'
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -61,6 +46,7 @@ function partsInZone(timeZone) {
 
 /** Живые часы с датой — используют часовой пояс/формат из региональных настроек заведения. */
 export default function LiveClock({ timezone = 'Asia/Tashkent', timeFormat = '24h', className = '' }) {
+  const { t } = useI18n()
   const [now, setNow] = useState(() => partsInZone(timezone))
 
   useEffect(() => {
@@ -76,8 +62,10 @@ export default function LiveClock({ timezone = 'Asia/Tashkent', timeFormat = '24
     if (hour === 0) hour = 12
   }
 
+  const weekdays = t('common2.weekdaysFull')
+  const months = t('employees.months')
   const timeStr = `${pad2(hour)}:${pad2(now.minute)}:${pad2(now.second)}${suffix}`
-  const dateStr = `${WEEKDAYS_RU[now.weekdayIndex]}, ${now.day} ${MONTHS_RU[now.month - 1]} ${now.year}`
+  const dateStr = `${weekdays[now.weekdayIndex]}, ${now.day} ${months[now.month - 1]} ${now.year}`
 
   return (
     <div className={`live-clock ${className}`}>

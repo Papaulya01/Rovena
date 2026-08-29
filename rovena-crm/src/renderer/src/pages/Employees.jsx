@@ -1,29 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatPhoneInput, formatMoney, formatPriceInput, unformatPrice } from '../utils/format.js'
 import Select from '../components/Select.jsx'
+import { useI18n } from '../i18n/index.jsx'
 
-const POSITIONS = [
-  { value: 'cashier', label: 'Кассир' },
-  { value: 'waiter', label: 'Официант' },
-  { value: 'warehouse', label: 'Зав. склада' },
-  { value: 'accountant', label: 'Бухгалтер' },
-  { value: 'other', label: 'Другое' }
-]
-
-const SALARY_TYPES = [
-  { value: 'fixed', label: 'Оклад' },
-  { value: 'hourly', label: 'Почасовая' },
-  { value: 'percent', label: '% с продаж' }
-]
-
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const EMPLOYEE_COLORS = ['#c98a3e', '#3a6a8f', '#2f7d5f', '#b5493f', '#7d5fb5', '#5f7db5', '#a67c2e', '#4f9d8f']
 
 const EMPTY_EMPLOYEE = { full_name: '', position: 'cashier', phone: '', salary_type: 'fixed', salary_rate: '' }
-
-function positionLabel(value) {
-  return POSITIONS.find((p) => p.value === value)?.label || value
-}
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -33,7 +15,7 @@ function toISODate(date) {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
 }
 
-function formatRuDate(iso) {
+function formatShortDate(iso) {
   const [y, m, d] = iso.split('-')
   return `${d}.${m}.${y}`
 }
@@ -48,11 +30,6 @@ function startOfMonth(date) {
 
 function shiftMonth(date, delta) {
   return new Date(date.getFullYear(), date.getMonth() + delta, 1)
-}
-
-function monthLabel(date) {
-  const label = date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
-  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 function buildMonthCells(viewDate) {
@@ -75,6 +52,7 @@ function employeeColor(id) {
 }
 
 function ShiftModal({ date, entry, employees, onClose, onSaved, onDeleted }) {
+  const { t } = useI18n()
   const [employeeId, setEmployeeId] = useState(entry ? String(entry.employee_id) : '')
   const [startTime, setStartTime] = useState(entry?.start_time || '')
   const [endTime, setEndTime] = useState(entry?.end_time || '')
@@ -113,43 +91,43 @@ function ShiftModal({ date, entry, employees, onClose, onSaved, onDeleted }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="card" style={{ maxWidth: 380, width: '100%' }} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ marginTop: 0 }}>
-          {entry ? 'Смена' : 'Новая смена'} · {formatRuDate(date)}
+          {entry ? t('employees.shiftModalTitleEdit') : t('employees.shiftModalTitleNew')} · {formatShortDate(date)}
         </h3>
         <form onSubmit={handleSave}>
           <div style={{ marginBottom: 14 }}>
-            <label>Сотрудник</label>
+            <label>{t('employees.employee')}</label>
             <Select
               value={employeeId}
               onChange={setEmployeeId}
-              placeholder="Выберите..."
+              placeholder={t('employees.choose')}
               options={employees.filter((e) => e.is_active).map((e) => ({ value: String(e.id), label: e.full_name }))}
             />
           </div>
           <div className="form-row">
             <div>
-              <label>Начало</label>
+              <label>{t('employees.start')}</label>
               <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
             </div>
             <div>
-              <label>Окончание</label>
+              <label>{t('employees.end')}</label>
               <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
             </div>
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label>Заметка (необязательно)</label>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="напр. подмена, стажировка" />
+            <label>{t('employees.note')}</label>
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('employees.notePlaceholder')} />
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn" type="submit" disabled={busy || !employeeId}>
-              {busy ? 'Сохраняем...' : entry ? 'Сохранить' : 'Добавить'}
+              {busy ? t('employees.saving') : entry ? t('common.save') : t('common.add')}
             </button>
             {entry && (
               <button className="btn secondary" type="button" onClick={handleDelete} disabled={busy}>
-                Удалить
+                {t('common.delete')}
               </button>
             )}
             <button className="btn secondary" type="button" onClick={onClose} disabled={busy}>
-              Отмена
+              {t('common.cancel')}
             </button>
           </div>
         </form>
@@ -159,6 +137,30 @@ function ShiftModal({ date, entry, employees, onClose, onSaved, onDeleted }) {
 }
 
 export default function Employees() {
+  const { t } = useI18n()
+  const POSITIONS = [
+    { value: 'cashier', label: t('employees.positionCashier') },
+    { value: 'waiter', label: t('employees.positionWaiter') },
+    { value: 'warehouse', label: t('employees.positionWarehouse') },
+    { value: 'accountant', label: t('employees.positionAccountant') },
+    { value: 'other', label: t('employees.positionOther') }
+  ]
+  const SALARY_TYPES = [
+    { value: 'fixed', label: t('employees.salaryFixed') },
+    { value: 'hourly', label: t('employees.salaryHourly') },
+    { value: 'percent', label: t('employees.salaryPercent') }
+  ]
+  const MONTHS = t('employees.months')
+  const WEEKDAYS = t('employees.weekdaysShort')
+
+  function positionLabel(value) {
+    return POSITIONS.find((p) => p.value === value)?.label || value
+  }
+  function monthLabel(date) {
+    const label = `${MONTHS[date.getMonth()]} ${date.getFullYear()}`
+    return label.charAt(0).toUpperCase() + label.slice(1)
+  }
+
   const [employees, setEmployees] = useState([])
   const [schedule, setSchedule] = useState([])
   const [showEmployeeForm, setShowEmployeeForm] = useState(false)
@@ -217,11 +219,11 @@ export default function Employees() {
     <div>
       <div className="page-header">
         <div>
-          <h1>Сотрудники</h1>
-          <p>Справочник сотрудников для отчётности/ЗП и плановый график смен</p>
+          <h1>{t('employees.title')}</h1>
+          <p>{t('employees.subtitle')}</p>
         </div>
         <button className="btn" onClick={() => setShowEmployeeForm((v) => !v)}>
-          {showEmployeeForm ? 'Отмена' : '+ Сотрудник'}
+          {showEmployeeForm ? t('common.cancel') : t('employees.addEmployee')}
         </button>
       </div>
 
@@ -229,7 +231,7 @@ export default function Employees() {
         <form className="card" style={{ marginBottom: 20 }} onSubmit={addEmployee}>
           <div className="form-row">
             <div>
-              <label>ФИО</label>
+              <label>{t('employees.fullName')}</label>
               <input
                 value={employeeForm.full_name}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, full_name: e.target.value })}
@@ -237,7 +239,7 @@ export default function Employees() {
               />
             </div>
             <div>
-              <label>Должность</label>
+              <label>{t('employees.position')}</label>
               <Select
                 value={employeeForm.position}
                 onChange={(v) => setEmployeeForm({ ...employeeForm, position: v })}
@@ -247,7 +249,7 @@ export default function Employees() {
           </div>
           <div className="form-row">
             <div>
-              <label>Телефон</label>
+              <label>{t('common2.phone')}</label>
               <input
                 inputMode="tel"
                 placeholder="+998 (__) ___-__-__"
@@ -259,7 +261,7 @@ export default function Employees() {
           </div>
           <div className="form-row">
             <div>
-              <label>Тип оплаты</label>
+              <label>{t('employees.payment')}</label>
               <Select
                 value={employeeForm.salary_type}
                 onChange={(v) => setEmployeeForm({ ...employeeForm, salary_type: v })}
@@ -267,7 +269,7 @@ export default function Employees() {
               />
             </div>
             <div>
-              <label>Ставка</label>
+              <label>{t('common2.price')}</label>
               <input
                 inputMode="decimal"
                 value={employeeForm.salary_rate}
@@ -279,23 +281,23 @@ export default function Employees() {
             </div>
           </div>
           <button className="btn" type="submit">
-            Добавить сотрудника
+            {t('employees.addSubmit')}
           </button>
         </form>
       )}
 
       <div className="card" style={{ marginBottom: 24 }}>
         {employees.length === 0 ? (
-          <div className="empty-state">Сотрудников пока нет</div>
+          <div className="empty-state">{t('employees.noEmployees')}</div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>ФИО</th>
-                <th>Должность</th>
-                <th>Телефон</th>
-                <th>Оплата</th>
-                <th>Статус</th>
+                <th>{t('employees.fullName')}</th>
+                <th>{t('employees.position')}</th>
+                <th>{t('common2.phone')}</th>
+                <th>{t('employees.payment')}</th>
+                <th>{t('cashier.status')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -313,15 +315,15 @@ export default function Employees() {
                   </td>
                   <td>
                     <span className={`badge ${emp.is_active ? 'status-confirmed' : 'status-cancelled'}`}>
-                      {emp.is_active ? 'активен' : 'скрыт'}
+                      {emp.is_active ? t('common.active') : t('common.hidden')}
                     </span>
                   </td>
                   <td style={{ display: 'flex', gap: 8 }}>
                     <button className="btn secondary" onClick={() => toggleActive(emp)}>
-                      {emp.is_active ? 'Скрыть' : 'Показать'}
+                      {emp.is_active ? t('common.hide') : t('common.show')}
                     </button>
                     <button className="btn secondary" onClick={() => removeEmployee(emp.id)}>
-                      Удалить
+                      {t('common.delete')}
                     </button>
                   </td>
                 </tr>
@@ -333,8 +335,8 @@ export default function Employees() {
 
       <div className="page-header">
         <div>
-          <h1 style={{ fontSize: 20 }}>График смен</h1>
-          <p>Кликните на число в календаре, чтобы назначить сотрудника на смену</p>
+          <h1 style={{ fontSize: 20 }}>{t('employees.scheduleTitle')}</h1>
+          <p>{t('employees.scheduleSubtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button className="btn secondary icon-btn" onClick={() => setViewDate(shiftMonth(viewDate, -1))}>
@@ -345,19 +347,19 @@ export default function Employees() {
             ›
           </button>
           <button className="btn secondary" onClick={() => setViewDate(startOfMonth(new Date()))}>
-            Сегодня
+            {t('employees.today')}
           </button>
         </div>
       </div>
 
       <div className="card">
         {employees.filter((e) => e.is_active).length === 0 ? (
-          <div className="empty-state">Сначала добавьте активных сотрудников — тогда можно будет назначать смены</div>
+          <div className="empty-state">{t('employees.addFirstEmployeesHint')}</div>
         ) : (
           <>
             <div className="calendar-weekdays">
-              {WEEKDAYS.map((w) => (
-                <div key={w} className="calendar-weekday">
+              {WEEKDAYS.map((w, i) => (
+                <div key={i} className="calendar-weekday">
                   {w}
                 </div>
               ))}
@@ -375,7 +377,7 @@ export default function Employees() {
                       <button
                         type="button"
                         className="calendar-add-btn"
-                        title="Назначить смену"
+                        title={t('employees.assignShift')}
                         onClick={() => setShiftModal({ date: iso, entry: null })}
                       >
                         +
