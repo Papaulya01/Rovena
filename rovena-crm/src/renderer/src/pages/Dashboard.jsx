@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { formatMoney, formatDateTime, formatTime } from '../utils/format.js'
-
-const STATUS_LABEL = { free: 'Свободен', reserved: 'Бронь', occupied: 'Занят' }
+import { useI18n } from '../i18n/index.jsx'
 
 export default function Dashboard() {
+  const { t } = useI18n()
   const [summary, setSummary] = useState(null)
   const [orders, setOrders] = useState([])
   const [bookings, setBookings] = useState([])
   const [tableStatuses, setTableStatuses] = useState([])
+
+  const STATUS_LABEL = { free: t('dashboard.statusFree'), reserved: t('dashboard.statusReserved'), occupied: t('dashboard.statusOccupied') }
 
   useEffect(() => {
     window.rovena.finance.summary().then(setSummary)
@@ -24,78 +26,80 @@ export default function Dashboard() {
     <div>
       <div className="page-header">
         <div>
-          <h1>Обзор</h1>
-          <p>Сводка по заказам, броням и бухгалтерии</p>
+          <h1>{t('dashboard.title')}</h1>
+          <p>{t('dashboard.subtitle')}</p>
         </div>
       </div>
 
       <div className="grid cols-3" style={{ marginBottom: 24 }}>
         <div className="card stat-card">
-          <div className="label">Доход</div>
+          <div className="label">{t('dashboard.income')}</div>
           <div className="value income">{summary ? formatMoney(summary.income) : '—'}</div>
         </div>
         <div className="card stat-card">
-          <div className="label">Расход</div>
+          <div className="label">{t('dashboard.expense')}</div>
           <div className="value expense">{summary ? formatMoney(summary.expense) : '—'}</div>
         </div>
         <div className="card stat-card">
-          <div className="label">Баланс</div>
+          <div className="label">{t('dashboard.balance')}</div>
           <div className="value">{summary ? formatMoney(summary.balance) : '—'}</div>
         </div>
       </div>
 
       <div className="card" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Столы сейчас</h3>
+          <h3 style={{ margin: 0 }}>{t('dashboard.tablesNow')}</h3>
           <div style={{ display: 'flex', gap: 14, fontSize: 11.5, color: 'var(--ink-soft)' }}>
             <span>
-              <span className="dot online" style={{ background: 'var(--income)' }} /> свободен
+              <span className="dot online" style={{ background: 'var(--income)' }} /> {t('dashboard.free')}
             </span>
             <span>
-              <span className="dot online" style={{ background: 'var(--accent)' }} /> бронь
+              <span className="dot online" style={{ background: 'var(--accent)' }} /> {t('dashboard.reserved')}
             </span>
             <span>
-              <span className="dot online" style={{ background: 'var(--expense)' }} /> занят
+              <span className="dot online" style={{ background: 'var(--expense)' }} /> {t('dashboard.occupied')}
             </span>
           </div>
         </div>
         {tableStatuses.length === 0 ? (
-          <div className="empty-state">Столы ещё не заведены — раздел «Столы»</div>
+          <div className="empty-state">{t('dashboard.noTablesYet')}</div>
         ) : (
           <div className="table-status-grid">
-            {tableStatuses.map((t) => {
-              const booking = t.current || t.next
-              const hasOrders = t.openOrders && t.openOrders.length > 0
+            {tableStatuses.map((t2) => {
+              const booking = t2.current || t2.next
+              const hasOrders = t2.openOrders && t2.openOrders.length > 0
               return (
-                <div key={t.id} className={`table-card ${t.status}`}>
-                  <div className="table-card-name">{t.name}</div>
+                <div key={t2.id} className={`table-card ${t2.status}`}>
+                  <div className="table-card-name">{t2.name}</div>
                   <div className="table-card-meta">
-                    на {t.capacity}
-                    {t.zone ? ` · ${t.zone}` : ''}
+                    {t2.capacity}
+                    {t2.zone ? ` · ${t2.zone}` : ''}
                   </div>
-                  <div className="table-card-status">{STATUS_LABEL[t.status]}</div>
+                  <div className="table-card-status">{STATUS_LABEL[t2.status]}</div>
 
                   {hasOrders && (
                     <div className="table-card-order">
-                      {t.openOrders.map((o) => (
+                      {t2.openOrders.map((o) => (
                         <div key={o.id} className="table-card-order-row">
                           <span className={`badge status-${o.status}`}>{o.status}</span>
                           <span className="table-card-order-items">
-                            {o.items.map((i) => `${i.name} ×${i.qty}`).join(', ') || 'без позиций'}
+                            {o.items.map((i) => `${i.name} ×${i.qty}`).join(', ') || t('dashboard.noItems')}
                           </span>
                         </div>
                       ))}
-                      <div className="table-card-order-total">Чек: {formatMoney(t.orderTotal)}</div>
+                      <div className="table-card-order-total">
+                        {t('dashboard.receipt')}: {formatMoney(t2.orderTotal)}
+                      </div>
                     </div>
                   )}
 
                   {booking && (
                     <div className="table-card-detail">
-                      {booking.client_name || 'без имени'}
+                      {booking.client_name || t('dashboard.noName')}
                       <br />
-                      {t.current
-                        ? `до ${booking.date_to ? formatTime(booking.date_to) : '?'}`
-                        : `с ${formatTime(booking.date_from)}`}
+                      {t2.current
+                        ? `${t('dashboard.until')} ${booking.date_to ? formatTime(booking.date_to) : '?'}`
+                        : `${t('dashboard.from')} ${formatTime(booking.date_from)}`}
                     </div>
                   )}
                 </div>
@@ -107,9 +111,9 @@ export default function Dashboard() {
 
       <div className="grid cols-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Последние заказы</h3>
+          <h3 style={{ marginTop: 0 }}>{t('dashboard.recentOrders')}</h3>
           {orders.length === 0 ? (
-            <div className="empty-state">Заказов пока нет</div>
+            <div className="empty-state">{t('dashboard.noOrdersYet')}</div>
           ) : (
             <table>
               <tbody>
@@ -129,9 +133,9 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Ближайшие брони</h3>
+          <h3 style={{ marginTop: 0 }}>{t('dashboard.upcomingBookings')}</h3>
           {bookings.length === 0 ? (
-            <div className="empty-state">Броней пока нет</div>
+            <div className="empty-state">{t('dashboard.noBookingsYet')}</div>
           ) : (
             <table>
               <tbody>

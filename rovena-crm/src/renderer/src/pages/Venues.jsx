@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react'
 import Select from '../components/Select.jsx'
-
-const ROLES = [
-  { value: 'admin', label: 'Админ — полный доступ' },
-  { value: 'accountant', label: 'Бухгалтер — бухгалтерия и сотрудники' },
-  { value: 'warehouse', label: 'Зав. склада' },
-  { value: 'cashier', label: 'Кассир/официант — работает в Rovena-Staff' }
-]
+import { useI18n } from '../i18n/index.jsx'
 
 function CopyChip({ value, placeholder }) {
   const [copied, setCopied] = useState(false)
@@ -34,6 +28,13 @@ function CopyChip({ value, placeholder }) {
 const EMPTY_USER = { username: '', password: '', displayName: '', role: 'admin', venueIds: [] }
 
 export default function Venues({ onVenuesChanged }) {
+  const { t } = useI18n()
+  const ROLES = [
+    { value: 'admin', label: t('venues.roleAdmin') },
+    { value: 'accountant', label: t('venues.roleAccountant') },
+    { value: 'warehouse', label: t('venues.roleWarehouse') },
+    { value: 'cashier', label: t('venues.roleCashier') }
+  ]
   const [venues, setVenues] = useState([])
   const [users, setUsers] = useState([])
   const [name, setName] = useState('')
@@ -62,7 +63,7 @@ export default function Venues({ onVenuesChanged }) {
     e.preventDefault()
     setUserError('')
     if (!userForm.username || userForm.password.length < 6 || userForm.venueIds.length === 0) {
-      setUserError('Логин, пароль от 6 символов и хотя бы одно заведение обязательны')
+      setUserError(t('venues.userValidationError'))
       return
     }
     try {
@@ -71,7 +72,7 @@ export default function Venues({ onVenuesChanged }) {
       setShowUserForm(false)
       load()
     } catch {
-      setUserError('Не получилось создать — логин уже занят')
+      setUserError(t('venues.userCreateError'))
     }
   }
 
@@ -106,15 +107,15 @@ export default function Venues({ onVenuesChanged }) {
     <div>
       <div className="page-header">
         <div>
-          <h1>Заведения</h1>
-          <p>Рестораны/кафе/бар, которые ведёт эта CRM — у каждого свой ключ для Staff</p>
+          <h1>{t('venues.title')}</h1>
+          <p>{t('venues.subtitle')}</p>
         </div>
       </div>
 
       <form className="card" style={{ marginBottom: 20, display: 'flex', gap: 10 }} onSubmit={addVenue}>
-        <input placeholder="Название нового заведения" value={name} onChange={(e) => setName(e.target.value)} />
+        <input placeholder={t('venues.newVenuePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
         <button className="btn" type="submit">
-          + Добавить
+          {t('venues.add')}
         </button>
       </form>
 
@@ -126,20 +127,20 @@ export default function Venues({ onVenuesChanged }) {
                 <span className={`dot ${v.is_active ? 'online' : 'offline'}`} />
                 <div>
                   {v.name}
-                  <div className="accordion-sub">{v.is_active ? 'активно' : 'скрыто'}</div>
+                  <div className="accordion-sub">{v.is_active ? t('venues.active') : t('venues.hidden')}</div>
                 </div>
               </div>
               <button className="btn secondary" onClick={() => toggleActive(v)}>
-                {v.is_active ? 'Скрыть' : 'Показать'}
+                {v.is_active ? t('common.hide') : t('common.show')}
               </button>
             </div>
             <div className="accordion-body">
               <div className="server-panel">
-                <label>API-ключ для Staff этого заведения</label>
+                <label>{t('venues.apiKeyLabel')}</label>
                 <div className="address-row">
-                  <CopyChip value={v.staff_api_key} placeholder="ключ не сгенерирован" />
+                  <CopyChip value={v.staff_api_key} placeholder={t('venues.keyNotGenerated')} />
                   <button className="btn secondary" disabled={busy} onClick={() => regenerateKey(v.id)}>
-                    Перевыпустить ключ
+                    {t('venues.regenerateKey')}
                   </button>
                 </div>
               </div>
@@ -150,11 +151,11 @@ export default function Venues({ onVenuesChanged }) {
 
       <div className="page-header" style={{ marginTop: 32 }}>
         <div>
-          <h1 style={{ fontSize: 20 }}>Пользователи</h1>
-          <p>Кто может входить в CRM и к каким заведениям есть доступ</p>
+          <h1 style={{ fontSize: 20 }}>{t('venues.usersTitle')}</h1>
+          <p>{t('venues.usersSubtitle')}</p>
         </div>
         <button className="btn" onClick={() => setShowUserForm((v) => !v)}>
-          {showUserForm ? 'Отмена' : '+ Пользователь'}
+          {showUserForm ? t('common.cancel') : t('venues.addUser')}
         </button>
       </div>
 
@@ -162,7 +163,7 @@ export default function Venues({ onVenuesChanged }) {
         <form className="card" style={{ marginBottom: 20 }} onSubmit={addUser}>
           <div className="form-row">
             <div>
-              <label>Логин</label>
+              <label>{t('login.username')}</label>
               <input
                 value={userForm.username}
                 onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
@@ -170,7 +171,7 @@ export default function Venues({ onVenuesChanged }) {
               />
             </div>
             <div>
-              <label>Пароль</label>
+              <label>{t('login.password')}</label>
               <input
                 type="password"
                 minLength={6}
@@ -181,18 +182,18 @@ export default function Venues({ onVenuesChanged }) {
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label>Имя</label>
+            <label>{t('venues.displayName')}</label>
             <input
               value={userForm.displayName}
               onChange={(e) => setUserForm({ ...userForm, displayName: e.target.value })}
             />
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label>Роль</label>
+            <label>{t('venues.role')}</label>
             <Select value={userForm.role} onChange={(v) => setUserForm({ ...userForm, role: v })} options={ROLES} />
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label>Доступ к заведениям</label>
+            <label>{t('venues.venueAccess')}</label>
             <div className="radio-group">
               {venues.map((v) => (
                 <label className="checkbox-label" key={v.id}>
@@ -208,23 +209,23 @@ export default function Venues({ onVenuesChanged }) {
           </div>
           {userError && <div className="auth-error">{userError}</div>}
           <button className="btn" type="submit">
-            Создать пользователя
+            {t('venues.createUser')}
           </button>
         </form>
       )}
 
       <div className="card">
         {users.length === 0 ? (
-          <div className="empty-state">Пользователей пока нет</div>
+          <div className="empty-state">{t('venues.noUsers')}</div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Логин</th>
-                <th>Имя</th>
-                <th>Роль</th>
-                <th>Заведения</th>
-                <th>Статус</th>
+                <th>{t('login.username')}</th>
+                <th>{t('venues.displayName')}</th>
+                <th>{t('venues.role')}</th>
+                <th>{t('venues.venuesColumn')}</th>
+                <th>{t('cashier.status')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -237,12 +238,12 @@ export default function Venues({ onVenuesChanged }) {
                   <td>{u.venues.map((v) => v.name).join(', ') || '—'}</td>
                   <td>
                     <span className={`badge ${u.is_active ? 'status-confirmed' : 'status-cancelled'}`}>
-                      {u.is_active ? 'активен' : 'отключён'}
+                      {u.is_active ? t('venues.activeUser') : t('venues.disabledUser')}
                     </span>
                   </td>
                   <td>
                     <button className="btn secondary" onClick={() => toggleUserActive(u)}>
-                      {u.is_active ? 'Отключить' : 'Включить'}
+                      {u.is_active ? t('venues.disable') : t('venues.enable')}
                     </button>
                   </td>
                 </tr>

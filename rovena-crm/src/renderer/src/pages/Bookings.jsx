@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { formatDateTime } from '../utils/format.js'
+import { useI18n } from '../i18n/index.jsx'
 
 /**
  * CRM — только контроль: брони создают Staff и Bot. Здесь можно только смотреть,
  * кто и на какой стол забронировал, и менять статус (подтвердить/отменить).
  */
 export default function Bookings() {
+  const { t } = useI18n()
   const [bookings, setBookings] = useState([])
 
   const load = () => window.rovena.bookings.list().then(setBookings)
@@ -25,28 +27,26 @@ export default function Bookings() {
     <div>
       <div className="page-header">
         <div>
-          <h1>Брони</h1>
-          <p>Брони создаются в Staff и Bot — здесь только просмотр и контроль статуса</p>
+          <h1>{t('bookings.title')}</h1>
+          <p>{t('bookings.subtitle')}</p>
         </div>
       </div>
 
       <div className="card">
         {bookings.length === 0 ? (
-          <div className="empty-state">
-            Броней пока нет — они появятся здесь, когда Staff или бот примут первую бронь
-          </div>
+          <div className="empty-state">{t('bookings.noBookings')}</div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Источник</th>
-                <th>Клиент</th>
-                <th>Стол</th>
-                <th>Цель</th>
-                <th>С</th>
-                <th>По</th>
-                <th>Статус</th>
+                <th>{t('common2.id')}</th>
+                <th>{t('common2.source')}</th>
+                <th>{t('common2.client')}</th>
+                <th>{t('tables.table')}</th>
+                <th>{t('bookings.purpose')}</th>
+                <th>{t('bookings.from')}</th>
+                <th>{t('bookings.to')}</th>
+                <th>{t('cashier.status')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -56,7 +56,7 @@ export default function Bookings() {
                   <td>#{b.id}</td>
                   <td>{b.source}</td>
                   <td>{b.client_name || '—'}</td>
-                  <td>{b.table_name ? `${b.table_name} (на ${b.table_capacity})` : '—'}</td>
+                  <td>{b.table_name ? `${b.table_name} (${b.table_capacity})` : '—'}</td>
                   <td>{b.purpose || '—'}</td>
                   <td>{formatDateTime(b.date_from)}</td>
                   <td>{formatDateTime(b.date_to)}</td>
@@ -66,7 +66,7 @@ export default function Bookings() {
                   <td>
                     {b.status !== 'confirmed' && b.status !== 'cancelled' && (
                       <button className="btn secondary" onClick={() => setStatus(b.id, 'confirmed')}>
-                        Подтвердить
+                        {t('bookings.confirm')}
                       </button>
                     )}
                   </td>

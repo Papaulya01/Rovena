@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatMoney, formatPriceInput, unformatPrice } from '../utils/format.js'
 import Select from '../components/Select.jsx'
+import { useI18n } from '../i18n/index.jsx'
 
 const EMPTY_ITEM = { category_id: '', name: '', price: '', description: '', image: '' }
 const CATEGORY_COLORS = ['#c98a3e', '#3a6a8f', '#2f7d5f', '#b5493f', '#7d5fb5', '#a67c2e', '#4f9d8f', '#8a5fb5']
@@ -10,6 +11,7 @@ function categoryColor(cat) {
 }
 
 function CategoryForm({ onAdded }) {
+  const { t } = useI18n()
   const [name, setName] = useState('')
   const [color, setColor] = useState(CATEGORY_COLORS[0])
   const [busy, setBusy] = useState(false)
@@ -26,7 +28,7 @@ function CategoryForm({ onAdded }) {
 
   return (
     <form onSubmit={submit} className="category-add-form">
-      <input placeholder="Название категории" value={name} onChange={(e) => setName(e.target.value)} />
+      <input placeholder={t('menuPage.categoryNamePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
       <div className="color-swatches">
         {CATEGORY_COLORS.map((c) => (
           <button
@@ -40,13 +42,14 @@ function CategoryForm({ onAdded }) {
         ))}
       </div>
       <button className="btn" type="submit" disabled={busy || !name.trim()} style={{ width: '100%' }}>
-        + Добавить категорию
+        {t('menuPage.addCategory')}
       </button>
     </form>
   )
 }
 
 export default function Menu() {
+  const { t } = useI18n()
   const [categories, setCategories] = useState([])
   const [items, setItems] = useState([])
   const [itemForm, setItemForm] = useState(EMPTY_ITEM)
@@ -133,20 +136,20 @@ export default function Menu() {
     <div>
       <div className="page-header">
         <div>
-          <h1>Меню</h1>
-          <p>Категории и позиции — единый каталог, который видят Staff и Bot через сервер CRM</p>
+          <h1>{t('menuPage.title')}</h1>
+          <p>{t('menuPage.subtitle')}</p>
         </div>
         <button className="btn" onClick={showItemForm ? closeItemForm : openAddItemForm}>
-          {showItemForm ? 'Отмена' : '+ Позиция'}
+          {showItemForm ? t('common.cancel') : t('menuPage.addItem')}
         </button>
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: '280px 1fr', alignItems: 'start' }}>
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Категории</h3>
+          <h3 style={{ marginTop: 0 }}>{t('menuPage.categories')}</h3>
           {categories.length === 0 ? (
             <div className="empty-state" style={{ padding: '16px 0' }}>
-              Категорий пока нет
+              {t('menuPage.noCategories')}
             </div>
           ) : (
             <div className="category-list">
@@ -160,7 +163,7 @@ export default function Menu() {
                     <button
                       type="button"
                       className="category-row-delete"
-                      title="Удалить категорию"
+                      title={t('menuPage.deleteCategory')}
                       onClick={() => removeCategory(c.id)}
                     >
                       ×
@@ -178,18 +181,18 @@ export default function Menu() {
             <form className="card" style={{ marginBottom: 20 }} onSubmit={submitItem}>
               <div className="form-row">
                 <div>
-                  <label>Категория</label>
+                  <label>{t('common2.category')}</label>
                   <Select
                     value={itemForm.category_id}
                     onChange={(v) => setItemForm({ ...itemForm, category_id: v })}
                     options={[
-                      { value: '', label: 'Без категории' },
+                      { value: '', label: t('menuPage.noCategory') },
                       ...categories.map((c) => ({ value: c.id, label: c.name }))
                     ]}
                   />
                 </div>
                 <div>
-                  <label>Название</label>
+                  <label>{t('common2.name')}</label>
                   <input
                     value={itemForm.name}
                     onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
@@ -199,7 +202,7 @@ export default function Menu() {
               </div>
               <div className="form-row">
                 <div>
-                  <label>Цена</label>
+                  <label>{t('common2.price')}</label>
                   <input
                     inputMode="decimal"
                     value={itemForm.price}
@@ -209,7 +212,7 @@ export default function Menu() {
                   />
                 </div>
                 <div>
-                  <label>Описание</label>
+                  <label>{t('common2.description')}</label>
                   <input
                     value={itemForm.description}
                     onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
@@ -217,16 +220,16 @@ export default function Menu() {
                 </div>
               </div>
               <div style={{ marginBottom: 16 }}>
-                <label>Фото блюда</label>
+                <label>{t('menuPage.photo')}</label>
                 <div className="photo-picker">
                   {itemForm.image ? (
                     <img src={itemForm.image} alt="" className="photo-preview" />
                   ) : (
-                    <div className="photo-preview photo-preview-empty">нет фото</div>
+                    <div className="photo-preview photo-preview-empty">{t('menuPage.noPhoto')}</div>
                   )}
                   <div className="photo-picker-actions">
                     <label className="btn secondary photo-upload-btn">
-                      Выбрать файл
+                      {t('menuPage.chooseFile')}
                       <input type="file" accept="image/*" onChange={handlePhotoChange} />
                     </label>
                     {itemForm.image && (
@@ -235,30 +238,30 @@ export default function Menu() {
                         className="btn secondary"
                         onClick={() => setItemForm({ ...itemForm, image: '' })}
                       >
-                        Убрать фото
+                        {t('menuPage.removePhoto')}
                       </button>
                     )}
                   </div>
                 </div>
               </div>
               <button className="btn" type="submit">
-                {editingItem ? 'Сохранить изменения' : 'Добавить в меню'}
+                {editingItem ? t('menuPage.saveChanges') : t('menuPage.addToMenu')}
               </button>
             </form>
           )}
 
           <div className="card">
             {items.length === 0 ? (
-              <div className="empty-state">Позиций пока нет — добавьте первую</div>
+              <div className="empty-state">{t('menuPage.noItems')}</div>
             ) : (
               <table>
                 <thead>
                   <tr>
                     <th></th>
-                    <th>Название</th>
-                    <th>Категория</th>
-                    <th>Цена</th>
-                    <th>Статус</th>
+                    <th>{t('common2.name')}</th>
+                    <th>{t('common2.category')}</th>
+                    <th>{t('common2.price')}</th>
+                    <th>{t('cashier.status')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -282,18 +285,18 @@ export default function Menu() {
                       <td>{formatMoney(item.price)}</td>
                       <td>
                         <span className={`badge ${item.is_active ? 'status-confirmed' : 'status-cancelled'}`}>
-                          {item.is_active ? 'активна' : 'скрыта'}
+                          {item.is_active ? t('menuPage.activeStatus') : t('menuPage.hiddenStatus')}
                         </span>
                       </td>
                       <td style={{ display: 'flex', gap: 8 }}>
                         <button className="btn secondary" onClick={() => startEdit(item)}>
-                          Изменить
+                          {t('common.edit')}
                         </button>
                         <button className="btn secondary" onClick={() => toggleActive(item)}>
-                          {item.is_active ? 'Скрыть' : 'Показать'}
+                          {item.is_active ? t('common.hide') : t('common.show')}
                         </button>
                         <button className="btn secondary" onClick={() => removeItem(item.id)}>
-                          Удалить
+                          {t('common.delete')}
                         </button>
                       </td>
                     </tr>

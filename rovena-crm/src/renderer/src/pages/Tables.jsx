@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useI18n } from '../i18n/index.jsx'
 
 const EMPTY_FORM = { name: '', capacity: 2, zone: '' }
 
 export default function Tables() {
+  const { t } = useI18n()
   const [tables, setTables] = useState([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [showForm, setShowForm] = useState(false)
@@ -40,11 +42,11 @@ export default function Tables() {
     <div>
       <div className="page-header">
         <div>
-          <h1>Столы</h1>
-          <p>Зал, на который ссылаются брони — тот же список видят Staff и бот (команда /tables)</p>
+          <h1>{t('tables.title')}</h1>
+          <p>{t('tables.subtitle')}</p>
         </div>
         <button className="btn" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? 'Отмена' : '+ Стол'}
+          {showForm ? t('common.cancel') : t('tables.addTable')}
         </button>
       </div>
 
@@ -52,16 +54,16 @@ export default function Tables() {
         <form className="card" style={{ marginBottom: 20 }} onSubmit={addTable}>
           <div className="form-row" style={{ gridTemplateColumns: '2fr 1fr 1fr' }}>
             <div>
-              <label>Название</label>
+              <label>{t('tables.tableName')}</label>
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="напр. Стол 5"
+                placeholder={t('tables.tableNamePlaceholder')}
                 required
               />
             </div>
             <div>
-              <label>Вместимость</label>
+              <label>{t('common2.capacity')}</label>
               <input
                 type="number"
                 min="1"
@@ -70,51 +72,51 @@ export default function Tables() {
               />
             </div>
             <div>
-              <label>Зона</label>
+              <label>{t('common2.zone')}</label>
               <input
                 value={form.zone}
                 onChange={(e) => setForm({ ...form, zone: e.target.value })}
-                placeholder="зал, терраса, vip..."
+                placeholder={t('tables.zonePlaceholder')}
               />
             </div>
           </div>
           <button className="btn" type="submit">
-            Добавить стол
+            {t('tables.addSubmit')}
           </button>
         </form>
       )}
 
       <div className="card">
         {tables.length === 0 ? (
-          <div className="empty-state">Столов пока нет — добавьте первый</div>
+          <div className="empty-state">{t('tables.noTables')}</div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Стол</th>
-                <th>Вместимость</th>
-                <th>Зона</th>
-                <th>Статус</th>
+                <th>{t('tables.table')}</th>
+                <th>{t('common2.capacity')}</th>
+                <th>{t('common2.zone')}</th>
+                <th>{t('cashier.status')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {tables.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{t.capacity}</td>
-                  <td>{t.zone || '—'}</td>
+              {tables.map((t2) => (
+                <tr key={t2.id}>
+                  <td>{t2.name}</td>
+                  <td>{t2.capacity}</td>
+                  <td>{t2.zone || '—'}</td>
                   <td>
-                    <span className={`badge ${t.is_active ? 'status-confirmed' : 'status-cancelled'}`}>
-                      {t.is_active ? 'активен' : 'скрыт'}
+                    <span className={`badge ${t2.is_active ? 'status-confirmed' : 'status-cancelled'}`}>
+                      {t2.is_active ? t('common.active') : t('common.hidden')}
                     </span>
                   </td>
                   <td style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn secondary" onClick={() => toggleActive(t)}>
-                      {t.is_active ? 'Скрыть' : 'Показать'}
+                    <button className="btn secondary" onClick={() => toggleActive(t2)}>
+                      {t2.is_active ? t('common.hide') : t('common.show')}
                     </button>
-                    <button className="btn secondary" onClick={() => removeTable(t.id)}>
-                      Удалить
+                    <button className="btn secondary" onClick={() => removeTable(t2.id)}>
+                      {t('common.delete')}
                     </button>
                   </td>
                 </tr>
