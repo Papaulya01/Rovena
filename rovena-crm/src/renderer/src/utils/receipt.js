@@ -6,7 +6,7 @@ const WIDTH_MM = { '58mm': 58, '80mm': 80, a4: 210 }
  * HTML чека-копии заказа для печати (обычный принтер/термопринтер через его Windows-драйвер).
  * Это не фискальный чек — фискализация требует отдельного сертифицированного модуля/ККМ.
  */
-export function buildReceiptHtml(order, { companyName, taxId, address, cashierName, receiptWidth = '80mm' } = {}) {
+export function buildReceiptHtml(order, { companyName, taxId, address, cashierName, receiptWidth = '80mm', logo } = {}) {
   const widthMm = WIDTH_MM[receiptWidth] || 80
   const isNarrow = widthMm <= 80
   const itemsRows = order.items
@@ -45,10 +45,12 @@ export function buildReceiptHtml(order, { companyName, taxId, address, cashierNa
   td.sum { width: 30%; text-align: right; }
   .total-row td { font-weight: bold; font-size: ${isNarrow ? '13px' : '16px'}; padding-top: 6px; }
   .footer { margin-top: 10px; font-size: ${isNarrow ? '10px' : '12px'}; }
+  .logo { max-width: ${isNarrow ? '90px' : '120px'}; max-height: ${isNarrow ? '90px' : '120px'}; margin: 0 auto 6px; display: block; }
 </style>
 </head>
 <body>
   <div class="center">
+    ${logo ? `<img class="logo" src="${logo}" alt="" />` : ''}
     <h1>${escapeHtml(companyName || 'Rovena')}</h1>
     ${taxId ? `<div class="muted">ИНН/СТИР: ${escapeHtml(taxId)}</div>` : ''}
     ${address ? `<div class="muted">${escapeHtml(address)}</div>` : ''}

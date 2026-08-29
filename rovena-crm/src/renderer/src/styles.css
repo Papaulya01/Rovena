@@ -1473,6 +1473,13 @@ input[type='radio']:disabled {
   border-bottom: 1px solid var(--line);
 }
 
+.report-logo {
+  max-width: 72px;
+  max-height: 72px;
+  margin: 0 auto 10px;
+  display: block;
+}
+
 .report-company {
   font-family: var(--font-display);
   font-size: 18px;

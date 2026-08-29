@@ -160,7 +160,8 @@ export default function CashierPanel({ session, onLogout }) {
         taxId: taxSettings?.tax_id,
         address: taxSettings?.address,
         cashierName: session.displayName,
-        receiptWidth: printerSettings?.receipt_width
+        receiptWidth: printerSettings?.receipt_width,
+        logo: taxSettings?.logo
       })
       await window.rovena.printer.print({
         html,

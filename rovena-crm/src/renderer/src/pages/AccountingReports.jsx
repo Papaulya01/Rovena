@@ -57,6 +57,7 @@ const POSITION_LABELS = {
 function ReportHeader({ title, dateFrom, dateTo, taxSettings, generatedBy }) {
   return (
     <div className="report-header">
+      {taxSettings?.logo && <img src={taxSettings.logo} alt="" className="report-logo" />}
       <div className="report-company">{taxSettings?.company_name || 'Название заведения не указано'}</div>
       {taxSettings?.tax_id && <div className="report-meta">ИНН/СТИР: {taxSettings.tax_id}</div>}
       {taxSettings?.address && <div className="report-meta">{taxSettings.address}</div>}
@@ -426,6 +427,15 @@ export function SettingsTab() {
     await window.rovena.taxSettings.update({ [field]: value })
   }
 
+  function handleLogoChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => save('logo', reader.result)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
   function rateField(field, label) {
     const shown = rateInputs[field] ?? (settings?.[field] ? String(settings[field]) : '')
     return (
@@ -452,6 +462,30 @@ export function SettingsTab() {
     <div>
       <div className="card" style={{ marginBottom: 20 }}>
         <h3 style={{ marginTop: 0 }}>Реквизиты для отчётов и чеков</h3>
+        <div style={{ marginBottom: 16 }}>
+          <label>Логотип</label>
+          <div className="photo-picker">
+            {settings.logo ? (
+              <img src={settings.logo} alt="" className="photo-preview" />
+            ) : (
+              <div className="photo-preview photo-preview-empty">нет лого</div>
+            )}
+            <div className="photo-picker-actions">
+              <label className="btn secondary photo-upload-btn">
+                Выбрать файл
+                <input type="file" accept="image/*" onChange={handleLogoChange} />
+              </label>
+              {settings.logo && (
+                <button type="button" className="btn secondary" onClick={() => save('logo', '')}>
+                  Убрать лого
+                </button>
+              )}
+            </div>
+          </div>
+          <p style={{ color: 'var(--ink-soft)', fontSize: 11.5, marginTop: 6, marginBottom: 0 }}>
+            Показывается в шапке печатных отчётов и на чеке из панели кассира.
+          </p>
+        </div>
         <div className="form-row">
           <div>
             <label>Название организации</label>

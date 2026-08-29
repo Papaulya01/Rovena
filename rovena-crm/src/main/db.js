@@ -216,6 +216,7 @@ CREATE TABLE IF NOT EXISTS tax_settings (
   company_name TEXT,
   tax_id TEXT,                                  -- ИНН/СТИР
   address TEXT,
+  logo TEXT,                                    -- data URL (base64) логотипа для отчётов/чеков
   notes TEXT,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -280,6 +281,7 @@ function migrate() {
   ensureColumn('finance_entries', 'venue_id', 'INTEGER REFERENCES venues(id) ON DELETE CASCADE')
   ensureColumn('menu_items', 'image', 'TEXT')
   ensureColumn('categories', 'color', 'TEXT')
+  ensureColumn('tax_settings', 'logo', 'TEXT')
 
   // Мультиточечность добавлена 27.08.2026 поверх уже работавшей однoточечной
   // модели: гарантируем хотя бы одно заведение и переносим на него все записи,
