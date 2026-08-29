@@ -33,6 +33,13 @@ export function registerIpcHandlers() {
   // ---------- Auth ----------
   ipcMain.handle('auth:hasUsers', () => auth.hasUsers())
   ipcMain.handle('auth:lastUsername', () => auth.getLocalSetting('last_username'))
+
+  // ---------- Язык интерфейса — локальная настройка устройства, доступна и до входа ----------
+  ipcMain.handle('settings:getLanguage', () => auth.getLocalSetting('app_language') || 'ru')
+  ipcMain.handle('settings:setLanguage', (_e, lang) => {
+    auth.setLocalSetting('app_language', lang)
+    return lang
+  })
   ipcMain.handle('auth:setup', (_e, payload) => auth.setupFirstAdmin(payload))
   ipcMain.handle('auth:login', (_e, payload) => auth.login(payload))
   ipcMain.handle('auth:logout', () => {

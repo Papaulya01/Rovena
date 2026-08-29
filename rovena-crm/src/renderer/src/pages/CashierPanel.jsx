@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import { formatMoney, formatPriceInput, unformatPrice, formatDateTime } from '../utils/format.js'
 import Select from '../components/Select.jsx'
 import LiveClock from '../components/LiveClock.jsx'
+import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import { buildReceiptHtml } from '../utils/receipt.js'
+import { useI18n } from '../i18n/index.jsx'
 
 function OpenShiftScreen({ onOpened }) {
+  const { t } = useI18n()
   const [startingCash, setStartingCash] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -17,7 +20,7 @@ function OpenShiftScreen({ onOpened }) {
       const shift = await window.rovena.shift.open({ startingCash: unformatPrice(startingCash) })
       onOpened(shift)
     } catch {
-      setError('Не получилось открыть смену')
+      setError(t('cashier.openError'))
     } finally {
       setBusy(false)
     }
@@ -26,11 +29,12 @@ function OpenShiftScreen({ onOpened }) {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <h2>Открыть смену</h2>
-        <p className="auth-sub">Укажите сумму наличных в кассе на начало смены</p>
+        <LanguageSwitcher className="lang-switcher-login" />
+        <h2 style={{ marginTop: 22 }}>{t('cashier.openShiftTitle')}</h2>
+        <p className="auth-sub">{t('cashier.openShiftSubtitle')}</p>
         <form onSubmit={handleOpen}>
           <div style={{ marginBottom: 16 }}>
-            <label>Сумма в кассе</label>
+            <label>{t('cashier.startingCash')}</label>
             <input
               inputMode="decimal"
               autoFocus
@@ -41,7 +45,7 @@ function OpenShiftScreen({ onOpened }) {
           </div>
           {error && <div className="auth-error">{error}</div>}
           <button className="btn" type="submit" disabled={busy} style={{ width: '100%' }}>
-            {busy ? 'Открываем...' : 'Открыть смену'}
+            {busy ? t('cashier.opening') : t('cashier.openShift')}
           </button>
         </form>
       </div>
@@ -50,6 +54,7 @@ function OpenShiftScreen({ onOpened }) {
 }
 
 function CloseShiftModal({ shift, onClosed, onCancel }) {
+  const { t } = useI18n()
   const [report, setReport] = useState(null)
   const [endingCash, setEndingCash] = useState('')
   const [busy, setBusy] = useState(false)
@@ -69,28 +74,28 @@ function CloseShiftModal({ shift, onClosed, onCancel }) {
   return (
     <div className="modal-overlay">
       <div className="card" style={{ maxWidth: 420, width: '100%' }}>
-        <h3 style={{ marginTop: 0 }}>Закрыть смену</h3>
+        <h3 style={{ marginTop: 0 }}>{t('cashier.closeShiftTitle')}</h3>
         <div className="server-panel" style={{ marginBottom: 16 }}>
           <div className="address-row" style={{ justifyContent: 'space-between' }}>
-            <span>Открыта</span>
+            <span>{t('cashier.opened')}</span>
             <strong>{formatDateTime(shift.opened_at)}</strong>
           </div>
           <div className="address-row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
-            <span>В кассе на начало</span>
+            <span>{t('cashier.startCash')}</span>
             <strong>{formatMoney(shift.starting_cash)}</strong>
           </div>
           <div className="address-row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
-            <span>Заказов за смену</span>
+            <span>{t('cashier.ordersInShift')}</span>
             <strong>{report ? report.ordersCount : '…'}</strong>
           </div>
           <div className="address-row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
-            <span>Сумма продаж</span>
+            <span>{t('cashier.salesTotal')}</span>
             <strong>{report ? formatMoney(report.total) : '…'}</strong>
           </div>
         </div>
         <form onSubmit={handleClose}>
           <div style={{ marginBottom: 16 }}>
-            <label>Сумма в кассе на конец смены</label>
+            <label>{t('cashier.endingCash')}</label>
             <input
               inputMode="decimal"
               autoFocus
@@ -102,10 +107,10 @@ function CloseShiftModal({ shift, onClosed, onCancel }) {
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn" type="submit" disabled={busy}>
-              {busy ? 'Закрываем...' : 'Закрыть смену'}
+              {busy ? t('cashier.closing') : t('cashier.closeShift')}
             </button>
             <button className="btn secondary" type="button" onClick={onCancel}>
-              Отмена
+              {t('common.cancel')}
             </button>
           </div>
         </form>
@@ -115,6 +120,7 @@ function CloseShiftModal({ shift, onClosed, onCancel }) {
 }
 
 export default function CashierPanel({ session, onLogout }) {
+  const { t } = useI18n()
   const [shift, setShift] = useState(undefined) // undefined = загрузка, null = нет открытой
   const [tableStatuses, setTableStatuses] = useState([])
   const [categories, setCategories] = useState([])
@@ -222,7 +228,9 @@ export default function CashierPanel({ session, onLogout }) {
           <img src="./logo.png" alt="" className="brand-mark" />
           <span>
             Rovena
-            <small>Касса · {session.displayName}</small>
+            <small>
+              {t('roles.cashier')} · {session.displayName}
+            </small>
           </span>
         </div>
         <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
@@ -231,48 +239,51 @@ export default function CashierPanel({ session, onLogout }) {
             timeFormat={regionalSettings?.time_format}
             className="cashier-clock"
           />
-          <span className="tag tag-lan">Смена с {formatDateTime(shift.opened_at)}</span>
+          <span className="tag tag-lan">
+            {t('cashier.shiftSince')} {formatDateTime(shift.opened_at)}
+          </span>
+          <LanguageSwitcher />
           <button className="btn secondary" onClick={() => setShowClose(true)}>
-            Закрыть смену
+            {t('cashier.closeShift')}
           </button>
           <button className="logout-link" onClick={onLogout}>
-            Выйти
+            {t('common.logout')}
           </button>
         </div>
       </header>
 
       <div className="cashier-body">
         <section className="cashier-col">
-          <h3 style={{ marginTop: 0 }}>Столы</h3>
+          <h3 style={{ marginTop: 0 }}>{t('cashier.tables')}</h3>
           <div className="table-status-grid">
-            {tableStatuses.map((t) => (
+            {tableStatuses.map((tb) => (
               <div
-                key={t.id}
-                className={`table-card ${t.status} ${String(t.id) === String(selectedTableId) ? 'selected' : ''}`}
-                onClick={() => setSelectedTableId(String(t.id))}
+                key={tb.id}
+                className={`table-card ${tb.status} ${String(tb.id) === String(selectedTableId) ? 'selected' : ''}`}
+                onClick={() => setSelectedTableId(String(tb.id))}
                 style={{ cursor: 'pointer' }}
               >
-                <div className="table-card-name">{t.name}</div>
+                <div className="table-card-name">{tb.name}</div>
                 <div className="table-card-meta">
-                  на {t.capacity}
-                  {t.zone ? ` · ${t.zone}` : ''}
+                  {tb.capacity} {t('cashier.peopleShort')}
+                  {tb.zone ? ` · ${tb.zone}` : ''}
                 </div>
               </div>
             ))}
           </div>
 
-          <h3>Заказы этой смены</h3>
+          <h3>{t('cashier.shiftOrders')}</h3>
           {shiftOrders.length === 0 ? (
-            <div className="empty-state">Пока нет заказов</div>
+            <div className="empty-state">{t('cashier.noOrders')}</div>
           ) : (
             <div className="card">
               <table>
                 <thead>
                   <tr>
-                    <th>Стол</th>
-                    <th>Позиции</th>
-                    <th>Сумма</th>
-                    <th>Статус</th>
+                    <th>{t('cashier.table')}</th>
+                    <th>{t('cashier.items')}</th>
+                    <th>{t('cashier.total')}</th>
+                    <th>{t('cashier.status')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -288,7 +299,7 @@ export default function CashierPanel({ session, onLogout }) {
                       <td style={{ display: 'flex', gap: 8 }}>
                         {o.status !== 'done' && o.status !== 'cancelled' && (
                           <button className="btn secondary" onClick={() => markOrderDone(o.id)}>
-                            Готово
+                            {t('cashier.done')}
                           </button>
                         )}
                         <button
@@ -296,7 +307,7 @@ export default function CashierPanel({ session, onLogout }) {
                           disabled={printingId === o.id}
                           onClick={() => printReceipt(o)}
                         >
-                          {printingId === o.id ? 'Печать...' : 'Чек'}
+                          {printingId === o.id ? t('cashier.printing') : t('cashier.receipt')}
                         </button>
                       </td>
                     </tr>
@@ -308,7 +319,7 @@ export default function CashierPanel({ session, onLogout }) {
         </section>
 
         <section className="cashier-col cashier-menu-col">
-          <h3 style={{ marginTop: 0 }}>Меню</h3>
+          <h3 style={{ marginTop: 0 }}>{t('cashier.menu')}</h3>
           <div className="menu-pick-list">
             {categories.map((cat) => {
               const items = menuItems.filter((i) => i.category_id === cat.id)
@@ -330,7 +341,7 @@ export default function CashierPanel({ session, onLogout }) {
             })}
             {menuItems.filter((i) => !i.category_id).length > 0 && (
               <div style={{ marginBottom: 14 }}>
-                <div className="menu-pick-category">Без категории</div>
+                <div className="menu-pick-category">{t('cashier.noCategoryLabel')}</div>
                 {menuItems
                   .filter((i) => !i.category_id)
                   .map((item) => (
@@ -348,18 +359,18 @@ export default function CashierPanel({ session, onLogout }) {
         </section>
 
         <section className="cashier-col cashier-cart-col">
-          <h3 style={{ marginTop: 0 }}>Текущий заказ</h3>
+          <h3 style={{ marginTop: 0 }}>{t('cashier.currentOrder')}</h3>
           <div style={{ marginBottom: 12 }}>
-            <label>Стол</label>
+            <label>{t('cashier.table')}</label>
             <Select
               value={selectedTableId}
               onChange={setSelectedTableId}
-              placeholder="Без стола"
+              placeholder={t('cashier.noTable')}
               options={tableStatuses.map((t) => ({ value: String(t.id), label: t.name }))}
             />
           </div>
           {cart.length === 0 ? (
-            <div className="empty-state">Добавьте позиции из меню</div>
+            <div className="empty-state">{t('cashier.addItemsHint')}</div>
           ) : (
             <div className="cart-list">
               {cart.map((c) => (
@@ -379,9 +390,11 @@ export default function CashierPanel({ session, onLogout }) {
               ))}
             </div>
           )}
-          <div className="cart-total">Итого: {formatMoney(cartTotal)}</div>
+          <div className="cart-total">
+            {t('cashier.orderTotal')}: {formatMoney(cartTotal)}
+          </div>
           <button className="btn" style={{ width: '100%' }} disabled={cart.length === 0 || submitting} onClick={submitOrder}>
-            {submitting ? 'Пробиваем...' : 'Пробить заказ'}
+            {submitting ? t('cashier.submitting') : t('cashier.submitOrder')}
           </button>
         </section>
       </div>

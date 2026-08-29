@@ -11,6 +11,8 @@ import Connections from './pages/Connections.jsx'
 import Venues from './pages/Venues.jsx'
 import Login from './pages/Login.jsx'
 import CashierPanel from './pages/CashierPanel.jsx'
+import { useI18n } from './i18n/index.jsx'
+import LanguageSwitcher from './components/LanguageSwitcher.jsx'
 import {
   IconDashboard,
   IconCalendar,
@@ -27,23 +29,16 @@ import {
 // warehouse — пока только обзор (экран склада ещё не сделан); cashier —
 // работает в Rovena-Staff, в CRM ему открывать нечего (см. CashierNotice).
 const NAV_ITEMS = [
-  { to: '/', label: 'Обзор', end: true, icon: IconDashboard, roles: ['admin', 'accountant', 'warehouse'] },
-  { to: '/bookings', label: 'Брони', icon: IconCalendar, roles: ['admin'] },
-  { to: '/tables', label: 'Столы', icon: IconTable, roles: ['admin'] },
-  { to: '/orders', label: 'Заказы', icon: IconBag, roles: ['admin'] },
-  { to: '/menu', label: 'Меню', icon: IconList, roles: ['admin'] },
-  { to: '/finance', label: 'Бухгалтерия', icon: IconWallet, roles: ['admin', 'accountant'] },
-  { to: '/employees', label: 'Сотрудники', icon: IconEmployees, roles: ['admin', 'accountant'] },
-  { to: '/venues', label: 'Заведения', icon: IconVenue, roles: ['admin'] },
-  { to: '/connections', label: 'Подключения', icon: IconLink, roles: ['admin'] }
+  { to: '/', labelKey: 'nav.dashboard', end: true, icon: IconDashboard, roles: ['admin', 'accountant', 'warehouse'] },
+  { to: '/bookings', labelKey: 'nav.bookings', icon: IconCalendar, roles: ['admin'] },
+  { to: '/tables', labelKey: 'nav.tables', icon: IconTable, roles: ['admin'] },
+  { to: '/orders', labelKey: 'nav.orders', icon: IconBag, roles: ['admin'] },
+  { to: '/menu', labelKey: 'nav.menu', icon: IconList, roles: ['admin'] },
+  { to: '/finance', labelKey: 'nav.finance', icon: IconWallet, roles: ['admin', 'accountant'] },
+  { to: '/employees', labelKey: 'nav.employees', icon: IconEmployees, roles: ['admin', 'accountant'] },
+  { to: '/venues', labelKey: 'nav.venues', icon: IconVenue, roles: ['admin'] },
+  { to: '/connections', labelKey: 'nav.connections', icon: IconLink, roles: ['admin'] }
 ]
-
-const ROLE_LABELS = {
-  admin: 'Админ',
-  accountant: 'Бухгалтер',
-  warehouse: 'Зав. склада',
-  cashier: 'Кассир'
-}
 
 function VenueSwitcher({ session, onChanged }) {
   const [venues, setVenues] = useState([])
@@ -75,13 +70,14 @@ function VenueSwitcher({ session, onChanged }) {
 }
 
 function NoAccessNotice({ onLogout }) {
+  const { t } = useI18n()
   return (
     <div className="auth-screen">
       <div className="auth-card" style={{ textAlign: 'center' }}>
-        <h2>Нет доступных разделов</h2>
-        <p className="auth-sub">Для вашей роли пока не настроено ни одного раздела CRM.</p>
+        <h2>{t('noAccess.title')}</h2>
+        <p className="auth-sub">{t('noAccess.subtitle')}</p>
         <button className="btn" onClick={onLogout} style={{ width: '100%' }}>
-          Выйти
+          {t('common.logout')}
         </button>
       </div>
     </div>
@@ -89,6 +85,7 @@ function NoAccessNotice({ onLogout }) {
 }
 
 export default function App() {
+  const { t } = useI18n()
   const [session, setSession] = useState(undefined) // undefined = ещё загружается, null = не вошли
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -127,7 +124,9 @@ export default function App() {
           <img src="./logo.png" alt="" className="brand-mark" />
           <span>
             Rovena
-            <small>CRM · {ROLE_LABELS[session.role] || session.role}</small>
+            <small>
+              {t('login.brandTagline')} · {t(`roles.${session.role}`)}
+            </small>
           </span>
         </div>
 
@@ -142,15 +141,18 @@ export default function App() {
               className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
             >
               <item.icon />
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-footer">
-          <div>{session.displayName}</div>
-          <button className="logout-link" onClick={handleLogout}>
-            Выйти
-          </button>
+          <LanguageSwitcher />
+          <div className="sidebar-footer-row">
+            <div>{session.displayName}</div>
+            <button className="logout-link" onClick={handleLogout}>
+              {t('common.logout')}
+            </button>
+          </div>
         </div>
       </aside>
       <main className="main" key={reloadKey}>

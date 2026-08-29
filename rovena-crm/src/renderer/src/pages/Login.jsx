@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { useI18n } from '../i18n/index.jsx'
+import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 
 /**
  * Один компонент на два состояния: если пользователей ещё нет — это экран
@@ -6,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
  * иначе — обычный вход. Логин запоминается локально ("последний вход"), пароль — никогда.
  */
 export default function Login({ onAuthenticated }) {
+  const { t } = useI18n()
   const [needsSetup, setNeedsSetup] = useState(null)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -46,11 +49,7 @@ export default function Login({ onAuthenticated }) {
         : await window.rovena.auth.login({ username, password })
       onAuthenticated(session)
     } catch (err) {
-      setError(
-        needsSetup
-          ? 'Не получилось создать аккаунт — логин занят или пароль короче 6 символов'
-          : 'Неверный логин или пароль'
-      )
+      setError(needsSetup ? t('login.setupError') : t('login.wrongCredentials'))
     } finally {
       setBusy(false)
     }
@@ -61,48 +60,45 @@ export default function Login({ onAuthenticated }) {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <div className="brand" style={{ justifyContent: 'center', borderBottom: 'none', marginBottom: 8 }}>
+        <LanguageSwitcher className="lang-switcher-login" />
+        <div className="brand" style={{ justifyContent: 'center', borderBottom: 'none', marginBottom: 8, marginTop: 22 }}>
           <img src="./logo.png" alt="" className="brand-mark" />
           <span>
             Rovena
-            <small>CRM · ADMIN</small>
+            <small>{t('login.brandTagline')}</small>
           </span>
         </div>
 
-        <h2>{needsSetup ? 'Первый запуск' : 'Вход'}</h2>
-        <p className="auth-sub">
-          {needsSetup
-            ? 'Создайте аккаунт администратора и назовите первое заведение'
-            : 'Введите логин и пароль'}
-        </p>
+        <h2>{needsSetup ? t('login.setupTitle') : t('login.loginTitle')}</h2>
+        <p className="auth-sub">{needsSetup ? t('login.setupSubtitle') : t('login.loginSubtitle')}</p>
 
         <form onSubmit={handleSubmit}>
           {needsSetup && (
             <>
               <div style={{ marginBottom: 12 }}>
-                <label>Название заведения</label>
+                <label>{t('login.venueName')}</label>
                 <input
                   value={venueName}
                   onChange={(e) => setVenueName(e.target.value)}
-                  placeholder="напр. Rovena на Мустакиллик"
+                  placeholder={t('login.venueNamePlaceholder')}
                 />
               </div>
               <div style={{ marginBottom: 12 }}>
-                <label>Ваше имя (необязательно)</label>
+                <label>{t('login.yourName')}</label>
                 <input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Как к вам обращаться"
+                  placeholder={t('login.yourNamePlaceholder')}
                 />
               </div>
             </>
           )}
           <div style={{ marginBottom: 12 }}>
-            <label>Логин</label>
+            <label>{t('login.username')}</label>
             <input ref={usernameRef} value={username} onChange={(e) => setUsername(e.target.value)} required />
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label>Пароль</label>
+            <label>{t('login.password')}</label>
             <input
               ref={passwordRef}
               type="password"
@@ -111,13 +107,19 @@ export default function Login({ onAuthenticated }) {
               required
               minLength={needsSetup ? 6 : undefined}
             />
-            {needsSetup && <div className="auth-hint">Минимум 6 символов</div>}
+            {needsSetup && <div className="auth-hint">{t('login.minChars')}</div>}
           </div>
 
           {error && <div className="auth-error">{error}</div>}
 
           <button className="btn" type="submit" disabled={busy} style={{ width: '100%' }}>
-            {busy ? 'Подождите...' : needsSetup ? 'Создать и войти' : 'Войти'}
+            {busy
+              ? needsSetup
+                ? t('login.creating')
+                : t('login.enteringIn')
+              : needsSetup
+                ? t('login.createAndEnter')
+                : t('login.enter')}
           </button>
         </form>
       </div>

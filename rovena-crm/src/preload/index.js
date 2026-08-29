@@ -4,6 +4,8 @@ const api = {
   auth: {
     hasUsers: () => ipcRenderer.invoke('auth:hasUsers'),
     lastUsername: () => ipcRenderer.invoke('auth:lastUsername'),
+    getLanguage: () => ipcRenderer.invoke('settings:getLanguage'),
+    setLanguage: (lang) => ipcRenderer.invoke('settings:setLanguage', lang),
     setup: (payload) => ipcRenderer.invoke('auth:setup', payload),
     login: (payload) => ipcRenderer.invoke('auth:login', payload),
     logout: () => ipcRenderer.invoke('auth:logout'),
