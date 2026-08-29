@@ -118,6 +118,17 @@ const api = {
   },
   audit: {
     list: () => ipcRenderer.invoke('audit:list')
+  },
+  updater: {
+    status: () => ipcRenderer.invoke('updater:status'),
+    check: () => ipcRenderer.invoke('updater:check'),
+    download: () => ipcRenderer.invoke('updater:download'),
+    install: () => ipcRenderer.invoke('updater:install'),
+    onState: (callback) => {
+      const listener = (_e, payload) => callback(payload)
+      ipcRenderer.on('updater:state', listener)
+      return () => ipcRenderer.removeListener('updater:state', listener)
+    }
   }
 }
 

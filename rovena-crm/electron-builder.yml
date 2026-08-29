@@ -7,8 +7,26 @@ files:
   - package.json
 asarUnpack:
   - '**/*.node'
+publish:
+  provider: github
+  owner: Papaulya01
+  repo: Rovena
 win:
   target: nsis
+  icon: resources/icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  installerHeaderIcon: resources/icon.ico
+  installerSidebar: build/installerSidebar.bmp
+  uninstallerSidebar: build/installerSidebar.bmp
+  artifactName: Rovena-CRM-Setup-${version}.${ext}
+  shortcutName: Rovena-CRM
 linux:
   target: AppImage
   category: Office

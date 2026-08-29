@@ -4,6 +4,7 @@ import * as repo from './repo.js'
 import * as auth from './auth.js'
 import { startServer, stopServer, getServerStatus, generateApiKey } from './server.js'
 import { startBot, stopBot, getBotStatus } from './bot.js'
+import { getUpdaterStatus, checkForUpdates, downloadUpdate, quitAndInstall } from './updater.js'
 
 function currentVenueId() {
   const session = auth.requireSession()
@@ -320,6 +321,21 @@ export function registerIpcHandlers() {
   })
   ipcMain.handle('bot:stop', () => stopBot())
   ipcMain.handle('bot:status', () => getBotStatus())
+
+  // ---------- Обновления приложения (electron-updater + GitHub Releases) — только админ ----------
+  ipcMain.handle('updater:status', () => getUpdaterStatus())
+  ipcMain.handle('updater:check', () => {
+    requireRole('admin')
+    return checkForUpdates()
+  })
+  ipcMain.handle('updater:download', () => {
+    requireRole('admin')
+    return downloadUpdate()
+  })
+  ipcMain.handle('updater:install', () => {
+    requireRole('admin')
+    quitAndInstall()
+  })
 
   // ---------- Audit log ----------
   ipcMain.handle('audit:list', () => repo.listAudit())

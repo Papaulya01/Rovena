@@ -9,6 +9,7 @@ const LABELS = {
   rovena_bot: 'Rovena-Bot',
   regional: 'Дата и время',
   printing: 'Печать чеков',
+  updates: 'Обновления',
   modules: 'Модули'
 }
 
@@ -18,6 +19,7 @@ const DESCRIPTIONS = {
   rovena_bot: 'Телеграм-бот, которым управляет CRM: брони, заказы и меню для клиентов.',
   regional: 'Часовой пояс и формат времени/даты — единые для CRM и панели кассира.',
   printing: 'Принтер и параметры печати чека-копии заказа для панели кассира.',
+  updates: 'Проверка новых версий и установка обновлений CRM.',
   modules: 'Подключаемые дополнения к CRM — раздел зарезервирован на будущее.'
 }
 
@@ -87,6 +89,22 @@ export default function Connections() {
   const [printerSettings, setPrinterSettings] = useState(null)
   const [printers, setPrinters] = useState([])
   const [testPrintResult, setTestPrintResult] = useState(null)
+  const [updater, setUpdater] = useState({ state: 'idle', currentVersion: '', info: null })
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+
+  useEffect(() => {
+    window.rovena.updater.status().then(setUpdater)
+    const unsubscribe = window.rovena.updater.onState((payload) =>
+      setUpdater((prev) => ({ ...prev, ...payload }))
+    )
+    return unsubscribe
+  }, [])
+
+  async function checkUpdates() {
+    setCheckingUpdate(true)
+    await window.rovena.updater.check()
+    setCheckingUpdate(false)
+  }
 
   const byName = (name) => connections.find((c) => c.name === name) || {}
 
@@ -526,6 +544,82 @@ export default function Connections() {
               </div>
             </>
           )}
+        </AccordionItem>
+
+        <AccordionItem
+          name="updates"
+          statusDot={updater.state === 'available' || updater.state === 'downloaded' ? 'online' : 'unknown'}
+          open={openName === 'updates'}
+          onToggle={() => setOpenName(openName === 'updates' ? null : 'updates')}
+        >
+          <div className="server-panel-row" style={{ marginBottom: 12 }}>
+            <div>
+              Текущая версия: <strong>{updater.currentVersion || '—'}</strong>
+            </div>
+            <button className="btn secondary" disabled={checkingUpdate} onClick={checkUpdates}>
+              {checkingUpdate ? 'Проверяем...' : 'Проверить обновления'}
+            </button>
+          </div>
+
+          {updater.state === 'not-available' && (
+            <div className="empty-hint">Установлена последняя версия.</div>
+          )}
+
+          {(updater.state === 'available' || updater.state === 'downloading' || updater.state === 'downloaded') &&
+            updater.info && (
+              <div className="server-panel" style={{ marginBottom: 12 }}>
+                <div className="server-panel-row">
+                  <strong>Доступна версия {updater.info.version}</strong>
+                </div>
+                {updater.info.releaseNotes && (
+                  <div
+                    className="update-changelog"
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        typeof updater.info.releaseNotes === 'string'
+                          ? updater.info.releaseNotes
+                          : 'Список изменений недоступен'
+                    }}
+                  />
+                )}
+              </div>
+            )}
+
+          {updater.state === 'available' && (
+            <button className="btn" onClick={() => window.rovena.updater.download()}>
+              Скачать обновление
+            </button>
+          )}
+
+          {updater.state === 'downloading' && (
+            <div>
+              <div className="progress-bar">
+                <div className="progress-bar-fill" style={{ width: `${updater.progress?.percent || 0}%` }} />
+              </div>
+              <div className="empty-hint">
+                Загрузка: {Math.round(updater.progress?.percent || 0)}% — не закрывайте приложение, пока
+                загрузка не завершится.
+              </div>
+            </div>
+          )}
+
+          {updater.state === 'downloaded' && (
+            <button className="btn" onClick={() => window.rovena.updater.install()}>
+              Установить и перезапустить
+            </button>
+          )}
+
+          {updater.state === 'error' && (
+            <div className="empty-hint" style={{ color: 'var(--expense)' }}>Ошибка проверки обновлений: {updater.error}</div>
+          )}
+
+          <div className="instructions">
+            <h4>Как это работает</h4>
+            CRM проверяет новые версии в GitHub Releases проекта. Когда версия доступна, здесь появляется
+            список изменений — сначала можно посмотреть, что нового, и только потом нажать «Скачать
+            обновление». После загрузки установка происходит по кнопке «Установить и перезапустить» — CRM
+            закроется и переустановится на новую версию автоматически, без обычного окна установщика.
+          </div>
         </AccordionItem>
 
         <AccordionItem

@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipcHandlers.js'
 import { startServer, stopServer } from './server.js'
 import { startBot, stopBot } from './bot.js'
 import { getConnection } from './repo.js'
+import { initUpdater, checkForUpdates } from './updater.js'
 
 // .ico (не .png) — чтобы Windows брал подходящий по чёткости размер для
 // заголовка окна, панели задач и Alt+Tab по отдельности, а не масштабировал один PNG.
@@ -28,6 +29,31 @@ if (!gotLock) {
 }
 
 let mainWindow = null
+let splashWindow = null
+
+function createSplash() {
+  splashWindow = new BrowserWindow({
+    width: 340,
+    height: 380,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: true,
+    alwaysOnTop: true,
+    center: true,
+    skipTaskbar: true,
+    icon: iconPath,
+    webPreferences: { sandbox: true }
+  })
+  splashWindow.loadFile(join(__dirname, '../../resources/splash.html'))
+}
+
+function closeSplash() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close()
+  }
+  splashWindow = null
+}
 
 // Сервер для Staff и бот поднимаются сами при каждом запуске CRM, если админ
 // один раз включил их в «Подключениях» — не нужно нажимать «Запустить» заново
@@ -70,8 +96,12 @@ function createWindow() {
   })
 
   mainWindow.on('ready-to-show', () => {
+    closeSplash()
     mainWindow.show()
   })
+  // Подстраховка: если по какой-то причине 'ready-to-show' не пришёл, сплэш
+  // всё равно не должен зависнуть на экране навсегда.
+  setTimeout(closeSplash, 8000)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -96,20 +126,27 @@ if (gotLock) {
   app.whenReady().then(() => {
     electronApp.setAppUserModelId('com.rovena.crm')
 
-    // Приложение работает без апдейтов и без стандартного меню Electron
-    // (File/Edit/View/Window/Help) — оно всплывало по Alt даже с autoHideMenuBar.
-    // Убираем совсем, а не просто прячем.
+    // Стандартное меню Electron (File/Edit/View/Window/Help) не нужно — оно
+    // всплывало по Alt даже с autoHideMenuBar. Убираем совсем, а не просто прячем.
     Menu.setApplicationMenu(null)
 
     app.on('browser-window-created', (_, window) => {
       optimizer.watchWindowShortcuts(window)
     })
 
+    createSplash()
+
     initDatabase()
     registerIpcHandlers()
     autoStartConnections()
 
     createWindow()
+    initUpdater(mainWindow)
+    // Автопроверка при старте — тихая, без диалогов; результат просто доступен
+    // админу в «Подключения → Обновления», когда он туда заглянет.
+    if (!is.dev) {
+      checkForUpdates().catch(() => {})
+    }
 
     app.on('activate', function () {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()

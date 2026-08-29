@@ -24,3 +24,5 @@ Thumbs.db
 .env
 .env.local
 *.pat
+
+rovena-crm/build/*_preview.png
