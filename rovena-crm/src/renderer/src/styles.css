@@ -1601,6 +1601,36 @@ input[type='radio']:disabled {
   background-position: right 8px center;
 }
 
+.lang-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.lang-button {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.lang-button:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.lang-button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 .lang-switcher-login {
   position: absolute;
   top: 20px;

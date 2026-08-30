@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n/index.jsx'
-import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
+import LanguageButtons from '../components/LanguageButtons.jsx'
 
 /**
  * Один компонент на два состояния: если пользователей ещё нет — это экран
@@ -60,8 +60,8 @@ export default function Login({ onAuthenticated }) {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <LanguageSwitcher className="lang-switcher-login" />
-        <div className="brand" style={{ justifyContent: 'center', borderBottom: 'none', marginBottom: 8, marginTop: 22 }}>
+        <LanguageButtons />
+        <div className="brand" style={{ justifyContent: 'center', borderBottom: 'none', marginBottom: 8 }}>
           <img src="./logo.png" alt="" className="brand-mark" />
           <span>
             Rovena

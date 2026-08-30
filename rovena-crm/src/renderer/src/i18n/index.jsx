@@ -4,9 +4,9 @@ import uzLatn from './uz-latn.js'
 import uzCyrl from './uz-cyrl.js'
 
 export const LANGUAGES = [
-  { value: 'ru', label: 'Русский' },
-  { value: 'uz-latn', label: "O'zbekcha (lotin)" },
-  { value: 'uz-cyrl', label: 'Ўзбекча (кирилл)' }
+  { value: 'ru', label: 'Русский', shortLabel: 'RU' },
+  { value: 'uz-latn', label: "O'zbekcha (lotin)", shortLabel: 'UZ' },
+  { value: 'uz-cyrl', label: 'Ўзбекча (кирилл)', shortLabel: 'ЎЗ' }
 ]
 
 const DICTS = { ru, 'uz-latn': uzLatn, 'uz-cyrl': uzCyrl }
