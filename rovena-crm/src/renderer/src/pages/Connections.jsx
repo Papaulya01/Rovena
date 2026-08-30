@@ -3,6 +3,25 @@ import Select from '../components/Select.jsx'
 import LiveClock from '../components/LiveClock.jsx'
 import { buildReceiptHtml } from '../utils/receipt.js'
 import { useI18n } from '../i18n/index.jsx'
+import {
+  IconGlobe,
+  IconMonitor,
+  IconBot,
+  IconClock,
+  IconPrinter,
+  IconRefresh,
+  IconPuzzle
+} from '../components/icons.jsx'
+
+const ICONS = {
+  radmin_api: IconGlobe,
+  rovena_staff: IconMonitor,
+  rovena_bot: IconBot,
+  regional: IconClock,
+  printing: IconPrinter,
+  updates: IconRefresh,
+  modules: IconPuzzle
+}
 
 /** Подставляет {токены} шаблона как <code> — для инструкций вида "откройте {botfather}". */
 function interpolateCode(template, replacements) {
@@ -46,11 +65,15 @@ function CopyChip({ value, placeholder }) {
 }
 
 function AccordionItem({ name, statusDot, badge, children, open, onToggle, labels, descriptions }) {
+  const Icon = ICONS[name]
   return (
     <div className={`accordion-item ${open ? 'open' : ''}`}>
       <button className="accordion-header" onClick={onToggle} type="button">
         <div className="accordion-title">
-          <span className={`dot ${statusDot}`} />
+          <span className="accordion-icon-wrap">
+            {Icon && <Icon className="accordion-icon" />}
+            <span className={`dot ${statusDot}`} />
+          </span>
           <div>
             {labels[name] || name}
             {badge && <span className="tag tag-soon">{badge}</span>}

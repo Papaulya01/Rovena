@@ -110,3 +110,69 @@ export function IconLink(props) {
     </svg>
   )
 }
+
+export function IconGlobe(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="10" cy="10" r="7.3" />
+      <path d="M2.9 10h14.2" />
+      <path d="M10 2.7c2.2 2 3.4 4.6 3.4 7.3s-1.2 5.3-3.4 7.3c-2.2-2-3.4-4.6-3.4-7.3s1.2-5.3 3.4-7.3z" />
+    </svg>
+  )
+}
+
+export function IconMonitor(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="2.5" y="3.5" width="15" height="10" rx="1.6" />
+      <path d="M7 17h6" />
+      <path d="M10 13.5V17" />
+    </svg>
+  )
+}
+
+export function IconBot(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M17.3 2.7 2.4 8.9c-.5.2-.5.9 0 1.1l4 1.4 1.5 4.5c.2.5.8.6 1.1.2l2-2.3 3.9 2.9c.4.3 1 .1 1.1-.4l2.4-13c.1-.5-.4-.9-.9-.7z" />
+      <path d="M6.4 11.4 15 5.2" />
+    </svg>
+  )
+}
+
+export function IconClock(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="10" cy="10.5" r="7.3" />
+      <path d="M10 6v4.7l3.2 2" />
+    </svg>
+  )
+}
+
+export function IconPrinter(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5.5 7.5V3h9v4.5" />
+      <rect x="2.5" y="7.5" width="15" height="7" rx="1.4" />
+      <path d="M5.5 14v3h9v-3" />
+      <circle cx="14.3" cy="10.3" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function IconRefresh(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M16.5 10a6.5 6.5 0 1 1-2-4.7" />
+      <path d="M16.5 3v4.5H12" />
+    </svg>
+  )
+}
+
+export function IconPuzzle(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 3.5h3v1.7a1.5 1.5 0 0 0 3 0V3.5h3V7h-1.7a1.5 1.5 0 0 0 0 3H16v3.5h-3v-1.7a1.5 1.5 0 0 0-3 0v1.7H7V10H5.3a1.5 1.5 0 0 1 0-3H7V3.5z" />
+    </svg>
+  )
+}
