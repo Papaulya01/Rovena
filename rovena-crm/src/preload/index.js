@@ -63,7 +63,8 @@ const api = {
       list: () => ipcRenderer.invoke('menu:categories:list'),
       create: (payload) => ipcRenderer.invoke('menu:categories:create', payload),
       update: (payload) => ipcRenderer.invoke('menu:categories:update', payload),
-      delete: (id) => ipcRenderer.invoke('menu:categories:delete', id)
+      delete: (id, generalName) => ipcRenderer.invoke('menu:categories:delete', { id, generalName }),
+      moveAllItems: (fromId, toId) => ipcRenderer.invoke('menu:categories:moveAllItems', { fromId, toId })
     },
     items: {
       list: () => ipcRenderer.invoke('menu:items:list'),

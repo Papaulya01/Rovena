@@ -296,9 +296,47 @@ export function updateCategory(id, payload) {
   return db.prepare(`SELECT * FROM categories WHERE id = ?`).get(id)
 }
 
-export function deleteCategory(id) {
-  getDb().prepare(`DELETE FROM categories WHERE id = ?`).run(id)
-  return { id }
+export function getGeneralCategory(venueId) {
+  return getDb().prepare(`SELECT * FROM categories WHERE venue_id = ? AND is_general = 1`).get(venueId)
+}
+
+export function getOrCreateGeneralCategory(venueId, name) {
+  const existing = getGeneralCategory(venueId)
+  if (existing) return existing
+  const db = getDb()
+  const info = db
+    .prepare(`INSERT INTO categories (venue_id, name, is_general, sort_order) VALUES (?, ?, 1, -1)`)
+    .run(venueId, name)
+  return db.prepare(`SELECT * FROM categories WHERE id = ?`).get(info.lastInsertRowid)
+}
+
+export function moveAllItems(fromCategoryId, toCategoryId) {
+  const db = getDb()
+  const info = db
+    .prepare(`UPDATE menu_items SET category_id = ? WHERE category_id = ?`)
+    .run(toCategoryId, fromCategoryId)
+  return { moved: info.changes }
+}
+
+/**
+ * Удаляет категорию. Если в ней есть позиции — сначала переносит их в "Общую"
+ * категорию (создаёт при первой необходимости), а не оставляет "без категории".
+ * "Общую" категорию, пока в ней есть позиции, удалить нельзя.
+ */
+export function deleteCategory(id, venueId, generalName) {
+  const db = getDb()
+  const cat = db.prepare(`SELECT * FROM categories WHERE id = ?`).get(id)
+  if (!cat) return { id, movedCount: 0 }
+  const itemCount = db.prepare(`SELECT COUNT(*) as c FROM menu_items WHERE category_id = ?`).get(id).c
+  if (itemCount > 0) {
+    if (cat.is_general) {
+      throw new Error('general_category_not_empty')
+    }
+    const general = getOrCreateGeneralCategory(venueId, generalName)
+    moveAllItems(id, general.id)
+  }
+  db.prepare(`DELETE FROM categories WHERE id = ?`).run(id)
+  return { id, movedCount: itemCount }
 }
 
 export function listMenuItems(venueId, { activeOnly = false } = {}) {

@@ -182,7 +182,10 @@ export function registerIpcHandlers() {
   ipcMain.handle('menu:categories:list', () => repo.listCategories(currentVenueId()))
   ipcMain.handle('menu:categories:create', (_e, payload) => repo.createCategory(currentVenueId(), payload))
   ipcMain.handle('menu:categories:update', (_e, { id, ...payload }) => repo.updateCategory(id, payload))
-  ipcMain.handle('menu:categories:delete', (_e, id) => repo.deleteCategory(id))
+  ipcMain.handle('menu:categories:delete', (_e, { id, generalName }) =>
+    repo.deleteCategory(id, currentVenueId(), generalName)
+  )
+  ipcMain.handle('menu:categories:moveAllItems', (_e, { fromId, toId }) => repo.moveAllItems(fromId, toId))
 
   ipcMain.handle('menu:items:list', () => repo.listMenuItems(currentVenueId()))
   ipcMain.handle('menu:items:create', (_e, payload) => repo.createMenuItem(currentVenueId(), payload))

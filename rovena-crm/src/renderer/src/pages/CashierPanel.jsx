@@ -238,6 +238,7 @@ export default function CashierPanel({ session, onLogout }) {
           <LiveClock
             timezone={regionalSettings?.timezone}
             timeFormat={regionalSettings?.time_format}
+            offsetMs={regionalSettings?.time_offset_ms || 0}
             className="cashier-clock"
           />
           <span className="tag tag-lan">

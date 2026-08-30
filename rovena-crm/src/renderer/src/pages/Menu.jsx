@@ -10,20 +10,35 @@ function categoryColor(cat) {
   return cat.color || CATEGORY_COLORS[cat.id % CATEGORY_COLORS.length]
 }
 
-function CategoryForm({ onAdded }) {
+/** Подставляет {токены} в шаблон перевода — для строк вида "В категории «{category}»...". */
+function fillTemplate(template, vars) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
+}
+
+function CategoryForm({ editing, onSaved, onCancelEdit }) {
   const { t } = useI18n()
-  const [name, setName] = useState('')
-  const [color, setColor] = useState(CATEGORY_COLORS[0])
+  const [name, setName] = useState(editing?.name || '')
+  const [color, setColor] = useState(editing?.color || CATEGORY_COLORS[0])
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    setName(editing?.name || '')
+    setColor(editing?.color || CATEGORY_COLORS[0])
+  }, [editing])
 
   async function submit(e) {
     e.preventDefault()
     if (!name.trim()) return
     setBusy(true)
-    await window.rovena.menu.categories.create({ name: name.trim(), color })
+    let saved
+    if (editing) {
+      saved = await window.rovena.menu.categories.update({ id: editing.id, name: name.trim(), color })
+    } else {
+      saved = await window.rovena.menu.categories.create({ name: name.trim(), color })
+    }
     setName('')
     setBusy(false)
-    onAdded()
+    onSaved(saved)
   }
 
   return (
@@ -41,9 +56,16 @@ function CategoryForm({ onAdded }) {
           />
         ))}
       </div>
-      <button className="btn" type="submit" disabled={busy || !name.trim()} style={{ width: '100%' }}>
-        {t('menuPage.addCategory')}
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <button className="btn" type="submit" disabled={busy || !name.trim()} style={{ width: '100%' }}>
+          {editing ? t('menuPage.saveCategory') : t('menuPage.addCategory')}
+        </button>
+        {editing && (
+          <button className="btn secondary" type="button" onClick={onCancelEdit} disabled={busy} style={{ width: '100%' }}>
+            {t('common.cancel')}
+          </button>
+        )}
+      </div>
     </form>
   )
 }
@@ -55,18 +77,53 @@ export default function Menu() {
   const [itemForm, setItemForm] = useState(EMPTY_ITEM)
   const [showItemForm, setShowItemForm] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
+  const [editingCategory, setEditingCategory] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // { category, count }
+  const [moveOffer, setMoveOffer] = useState(null) // { general, target, count }
 
-  const load = () => {
-    window.rovena.menu.categories.list().then(setCategories)
-    window.rovena.menu.items.list().then(setItems)
+  const load = async () => {
+    const [freshCategories, freshItems] = await Promise.all([
+      window.rovena.menu.categories.list(),
+      window.rovena.menu.items.list()
+    ])
+    setCategories(freshCategories)
+    setItems(freshItems)
+    return { freshCategories, freshItems }
   }
 
   useEffect(() => {
     load()
   }, [])
 
-  async function removeCategory(id) {
-    await window.rovena.menu.categories.delete(id)
+  async function performDeleteCategory(id) {
+    await window.rovena.menu.categories.delete(id, t('menuPage.generalCategoryName'))
+    load()
+  }
+
+  function requestRemoveCategory(cat) {
+    const count = items.filter((i) => i.category_id === cat.id).length
+    if (count > 0) {
+      setDeleteConfirm({ category: cat, count })
+      return
+    }
+    performDeleteCategory(cat.id)
+  }
+
+  async function handleCategorySaved(savedCategory) {
+    setEditingCategory(null)
+    const { freshCategories, freshItems } = await load()
+    if (editingCategory) return // редактирование — переносить нечего
+    const general = freshCategories.find((c) => c.is_general && c.id !== savedCategory.id)
+    if (!general) return
+    const count = freshItems.filter((i) => i.category_id === general.id).length
+    if (count > 0) {
+      setMoveOffer({ general, target: savedCategory, count })
+    }
+  }
+
+  async function confirmMoveOffer() {
+    await window.rovena.menu.categories.moveAllItems(moveOffer.general.id, moveOffer.target.id)
+    setMoveOffer(null)
     load()
   }
 
@@ -155,6 +212,7 @@ export default function Menu() {
             <div className="category-list">
               {categories.map((c) => {
                 const count = items.filter((i) => i.category_id === c.id).length
+                const deleteBlocked = c.is_general && count > 0
                 return (
                   <div key={c.id} className="category-row">
                     <span className="category-row-dot" style={{ background: categoryColor(c) }} />
@@ -162,9 +220,18 @@ export default function Menu() {
                     <span className="category-row-count">{count}</span>
                     <button
                       type="button"
+                      className="category-row-edit"
+                      title={t('menuPage.editCategory')}
+                      onClick={() => setEditingCategory(c)}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      type="button"
                       className="category-row-delete"
-                      title={t('menuPage.deleteCategory')}
-                      onClick={() => removeCategory(c.id)}
+                      title={deleteBlocked ? t('menuPage.generalCategoryProtected') : t('menuPage.deleteCategory')}
+                      disabled={deleteBlocked}
+                      onClick={() => requestRemoveCategory(c)}
                     >
                       ×
                     </button>
@@ -173,7 +240,11 @@ export default function Menu() {
               })}
             </div>
           )}
-          <CategoryForm onAdded={load} />
+          <CategoryForm
+            editing={editingCategory}
+            onSaved={handleCategorySaved}
+            onCancelEdit={() => setEditingCategory(null)}
+          />
         </div>
 
         <div>
@@ -307,6 +378,58 @@ export default function Menu() {
           </div>
         </div>
       </div>
+
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="card" style={{ maxWidth: 400, width: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>{t('menuPage.deleteConfirmTitle')}</h3>
+            <p style={{ color: 'var(--ink-soft)', fontSize: 13.5 }}>
+              {fillTemplate(t('menuPage.deleteConfirmText'), {
+                category: deleteConfirm.category.name,
+                count: deleteConfirm.count,
+                general: t('menuPage.generalCategoryName')
+              })}
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                className="btn"
+                onClick={async () => {
+                  await performDeleteCategory(deleteConfirm.category.id)
+                  setDeleteConfirm(null)
+                }}
+              >
+                {t('menuPage.deleteConfirmButton')}
+              </button>
+              <button className="btn secondary" onClick={() => setDeleteConfirm(null)}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {moveOffer && (
+        <div className="modal-overlay" onClick={() => setMoveOffer(null)}>
+          <div className="card" style={{ maxWidth: 400, width: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>{t('menuPage.moveOfferTitle')}</h3>
+            <p style={{ color: 'var(--ink-soft)', fontSize: 13.5 }}>
+              {fillTemplate(t('menuPage.moveOfferText'), {
+                general: t('menuPage.generalCategoryName'),
+                count: moveOffer.count,
+                target: moveOffer.target.name
+              })}
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn" onClick={confirmMoveOffer}>
+                {t('menuPage.moveOfferConfirm')}
+              </button>
+              <button className="btn secondary" onClick={() => setMoveOffer(null)}>
+                {t('menuPage.moveOfferSkip')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

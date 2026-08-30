@@ -5,7 +5,8 @@ function pad2(n) {
   return String(n).padStart(2, '0')
 }
 
-function partsInZone(timeZone) {
+function partsInZone(timeZone, offsetMs = 0) {
+  const base = new Date(Date.now() + offsetMs)
   try {
     const dtf = new Intl.DateTimeFormat('en-US', {
       timeZone,
@@ -19,7 +20,7 @@ function partsInZone(timeZone) {
       weekday: 'short'
     })
     const parts = {}
-    for (const p of dtf.formatToParts(new Date())) parts[p.type] = p.value
+    for (const p of dtf.formatToParts(base)) parts[p.type] = p.value
     const weekdayIndex = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday)
     return {
       year: Number(parts.year),
@@ -28,31 +29,31 @@ function partsInZone(timeZone) {
       hour: parts.hour === '24' ? 0 : Number(parts.hour),
       minute: Number(parts.minute),
       second: Number(parts.second),
-      weekdayIndex: weekdayIndex >= 0 ? weekdayIndex : new Date().getDay()
+      weekdayIndex: weekdayIndex >= 0 ? weekdayIndex : base.getDay()
     }
   } catch {
-    const d = new Date()
     return {
-      year: d.getFullYear(),
-      month: d.getMonth() + 1,
-      day: d.getDate(),
-      hour: d.getHours(),
-      minute: d.getMinutes(),
-      second: d.getSeconds(),
-      weekdayIndex: d.getDay()
+      year: base.getFullYear(),
+      month: base.getMonth() + 1,
+      day: base.getDate(),
+      hour: base.getHours(),
+      minute: base.getMinutes(),
+      second: base.getSeconds(),
+      weekdayIndex: base.getDay()
     }
   }
 }
 
-/** Живые часы с датой — используют часовой пояс/формат из региональных настроек заведения. */
-export default function LiveClock({ timezone = 'Asia/Tashkent', timeFormat = '24h', className = '' }) {
+/** Живые часы с датой — используют часовой пояс/формат/ручную поправку из региональных настроек заведения. */
+export default function LiveClock({ timezone = 'Asia/Tashkent', timeFormat = '24h', offsetMs = 0, className = '' }) {
   const { t } = useI18n()
-  const [now, setNow] = useState(() => partsInZone(timezone))
+  const [now, setNow] = useState(() => partsInZone(timezone, offsetMs))
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(partsInZone(timezone)), 1000)
+    setNow(partsInZone(timezone, offsetMs))
+    const interval = setInterval(() => setNow(partsInZone(timezone, offsetMs)), 1000)
     return () => clearInterval(interval)
-  }, [timezone])
+  }, [timezone, offsetMs])
 
   let hour = now.hour
   let suffix = ''

@@ -125,6 +125,8 @@ export default function Connections() {
   const [radminTest, setRadminTest] = useState(null)
   const [busy, setBusy] = useState(false)
   const [regionalSettings, setRegionalSettings] = useState(null)
+  const [manualTimeEditing, setManualTimeEditing] = useState(false)
+  const [manualTimeValue, setManualTimeValue] = useState('')
   const [printerSettings, setPrinterSettings] = useState(null)
   const [printers, setPrinters] = useState([])
   const [testPrintResult, setTestPrintResult] = useState(null)
@@ -218,6 +220,47 @@ export default function Connections() {
     setRegionalSettings((prev) => ({ ...prev, [field]: value }))
     await window.rovena.regionalSettings.update({ [field]: value })
     load()
+  }
+
+  function currentZonedNaiveDate(timeZone) {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+    const parts = {}
+    for (const p of dtf.formatToParts(new Date())) parts[p.type] = p.value
+    const hour = parts.hour === '24' ? 0 : Number(parts.hour)
+    return new Date(Number(parts.year), Number(parts.month) - 1, Number(parts.day), hour, Number(parts.minute), Number(parts.second))
+  }
+
+  function toDatetimeLocalValue(date) {
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
+
+  function openManualTimeEditor() {
+    const correctedNow = new Date(currentZonedNaiveDate(regionalSettings.timezone).getTime() + (regionalSettings.time_offset_ms || 0))
+    setManualTimeValue(toDatetimeLocalValue(correctedNow))
+    setManualTimeEditing(true)
+  }
+
+  async function saveManualTime() {
+    const target = new Date(manualTimeValue)
+    const naiveNow = currentZonedNaiveDate(regionalSettings.timezone)
+    const offset = target.getTime() - naiveNow.getTime()
+    await saveRegionalSetting('time_offset_ms', offset)
+    setManualTimeEditing(false)
+  }
+
+  async function resetManualTime() {
+    await saveRegionalSetting('time_offset_ms', 0)
+    setManualTimeEditing(false)
   }
 
   async function savePrinterSetting(field, value) {
@@ -475,7 +518,43 @@ export default function Connections() {
                 <div>
                   <label>{t('connections.now')}</label>
                   <div className="server-panel" style={{ padding: '10px 14px' }}>
-                    <LiveClock timezone={regionalSettings.timezone} timeFormat={regionalSettings.time_format} />
+                    <LiveClock
+                      timezone={regionalSettings.timezone}
+                      timeFormat={regionalSettings.time_format}
+                      offsetMs={regionalSettings.time_offset_ms || 0}
+                    />
+                    {!manualTimeEditing ? (
+                      <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <button type="button" className="btn secondary" onClick={openManualTimeEditor}>
+                          {t('connections.setTimeManually')}
+                        </button>
+                        {!!regionalSettings.time_offset_ms && (
+                          <>
+                            <span className="tag tag-soon">{t('connections.manualOffsetActive')}</span>
+                            <button type="button" className="btn secondary" onClick={resetManualTime}>
+                              {t('connections.resetTime')}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: 10 }}>
+                        <input
+                          type="datetime-local"
+                          value={manualTimeValue}
+                          onChange={(e) => setManualTimeValue(e.target.value)}
+                          style={{ marginBottom: 8, width: '100%' }}
+                        />
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button type="button" className="btn" onClick={saveManualTime}>
+                            {t('common.save')}
+                          </button>
+                          <button type="button" className="btn secondary" onClick={() => setManualTimeEditing(false)}>
+                            {t('common.cancel')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

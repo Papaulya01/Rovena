@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS categories (
   venue_id INTEGER REFERENCES venues(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   color TEXT,                       -- цвет метки категории в UI, необязательно
+  is_general INTEGER NOT NULL DEFAULT 0, -- "Общая" — сюда переезжают позиции при удалении их категории
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 
@@ -229,7 +230,8 @@ CREATE TABLE IF NOT EXISTS regional_settings (
   venue_id INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
   timezone TEXT NOT NULL DEFAULT 'Asia/Tashkent',
   time_format TEXT NOT NULL DEFAULT '24h', -- 24h | 12h
-  date_format TEXT NOT NULL DEFAULT 'dmy'  -- dmy (31.12.2026) | ymd (2026-12-31)
+  date_format TEXT NOT NULL DEFAULT 'dmy', -- dmy (31.12.2026) | ymd (2026-12-31)
+  time_offset_ms INTEGER NOT NULL DEFAULT 0 -- ручная поправка часов (мс) поверх системного времени устройства
 );
 
 -- Настройки печати чеков. Важно: это печать чека как копии заказа на обычном
@@ -282,6 +284,8 @@ function migrate() {
   ensureColumn('menu_items', 'image', 'TEXT')
   ensureColumn('categories', 'color', 'TEXT')
   ensureColumn('tax_settings', 'logo', 'TEXT')
+  ensureColumn('categories', 'is_general', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn('regional_settings', 'time_offset_ms', 'INTEGER NOT NULL DEFAULT 0')
 
   // Мультиточечность добавлена 27.08.2026 поверх уже работавшей однoточечной
   // модели: гарантируем хотя бы одно заведение и переносим на него все записи,

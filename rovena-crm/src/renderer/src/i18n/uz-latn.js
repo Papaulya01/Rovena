@@ -177,7 +177,18 @@ export default {
     addToMenu: 'Menyuga qoshish',
     noItems: "Hozircha taomlar yo'q — birinchisini qo'shing",
     activeStatus: 'faol',
-    hiddenStatus: 'yashirilgan'
+    hiddenStatus: 'yashirilgan',
+    editCategory: 'Turkumni tahrirlash',
+    saveCategory: 'Turkumni saqlash',
+    generalCategoryName: 'Umumiy',
+    generalCategoryProtected: "«Umumiy»ni o'chirib bo'lmaydi, unda taomlar bor ekan",
+    deleteConfirmTitle: "Turkumni o'chirasizmi?",
+    deleteConfirmText: "«{category}» turkumida {count} ta taom bor. O'chirilganda ular «{general}» turkumiga ko'chiriladi.",
+    deleteConfirmButton: "O'chirish va ko'chirish",
+    moveOfferTitle: "Taomlarni ko'chirasizmi?",
+    moveOfferText: "«{general}» turkumida {count} ta taom bor. Barchasini yangi «{target}» turkumiga ko'chirasizmi?",
+    moveOfferConfirm: "Barchasini ko'chirish",
+    moveOfferSkip: 'Hozir emas'
   },
   venues: {
     title: 'Muassasalar',
@@ -450,9 +461,12 @@ export default {
     formatDmy: 'KK.OO.YYYY (31.12.2026)',
     formatYmd: 'YYYY-OO-KK (2026-12-31)',
     now: 'Hozir',
+    setTimeManually: "Vaqtni qo'lda sozlash",
+    manualOffsetActive: "qo'lda tuzatish qo'llanilgan",
+    resetTime: 'Tiklash (tizim soatiga)',
     regionalHowTitle: 'Bu qanday ishlatiladi',
     regionalHowText:
-      "Vaqt zonasi va format bu yerda bir marta belgilanadi va butun CRM va kassir panelida (Rovena-Staff) qo'llaniladi — smenani ochish/yopish, buyurtmalar vaqt belgilari va kassir panelidagi soat aynan shu qurilmaning soati emas, shu sozlamalardan foydalanadi.",
+      "Vaqt zonasi va format bu yerda bir marta belgilanadi va butun CRM va kassir panelida (Rovena-Staff) qo'llaniladi — smenani ochish/yopish, buyurtmalar vaqt belgilari va kassir panelidagi soat aynan shu qurilmaning soati emas, shu sozlamalardan foydalanadi. Qurilma soati noto'g'ri yursa, vaqtni yuqoridagi tugma orqali qo'lda tuzatish mumkin — tuzatish faqat CRM'da ko'rsatish uchun qo'llaniladi, Windows'ning tizim sanasi/vaqti o'zgarmaydi.",
     printer: 'Printer',
     printerDefault: "Tizimda standart bo'yicha",
     receiptWidth: 'Chek kengligi',
