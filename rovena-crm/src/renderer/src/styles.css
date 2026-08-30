@@ -1718,3 +1718,61 @@ input[type='radio']:disabled {
   z-index: 100;
   padding: 20px;
 }
+
+/* ---------- Адаптивность (30.08.2026): CRM — большие мониторы/ноутбуки/ПК, панель кассира — моноблоки ---------- */
+
+/* Большие и широкие мониторы: контент не растягивается на всю ширину до дискомфорта, остаётся по центру */
+.main {
+  max-width: 1800px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.cashier-body {
+  max-width: 2400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Ноутбуки и более узкие окна CRM (минимальная ширина окна — 1024px) */
+@media (max-width: 1300px) {
+  .app-shell {
+    grid-template-columns: 208px 1fr;
+  }
+  .main {
+    padding: 22px 24px 50px;
+  }
+  .grid.cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1080px) {
+  .grid.cols-3 {
+    grid-template-columns: 1fr;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Моноблоки меньшего размера — панель кассира (минимальная ширина окна — 1024px) */
+@media (max-width: 1300px) {
+  .cashier-body {
+    grid-template-columns: 1.1fr 1fr 0.9fr;
+    gap: 14px;
+    padding: 16px 18px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .cashier-body {
+    grid-template-columns: 1fr 1fr 250px;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .cashier-shell .menu-pick-item-thumb {
+    width: 28px;
+    height: 28px;
+  }
+}
