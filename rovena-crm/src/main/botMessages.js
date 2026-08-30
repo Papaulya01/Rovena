@@ -126,7 +126,12 @@ const ru = {
   orderStatusCancelled: 'отменён',
   statusUpdateProcessing: 'Ваш заказ №{id} подтверждён и готовится к отправке ✅ Отменить его через бота уже нельзя.',
   staffOrderCancelledByGuest: '❌ Гость отменил заказ №{id} на {total} — {name} ({contact})',
-  testNotifyMessage: '🔔 Тестовое уведомление из Rovena-CRM — если вы это видите, chat_id указан верно.'
+  testNotifyMessage: '🔔 Тестовое уведомление из Rovena-CRM — если вы это видите, chat_id указан верно.',
+  btnStaffAcceptOrder: '✅ Принять заказ',
+  btnStaffAcceptBooking: '✅ Принять бронь',
+  staffAcceptedToast: 'Принято',
+  staffAcceptedBy: 'Принял(а): {name}',
+  staffUnknownName: 'сотрудник'
 }
 
 const uzLatn = {
@@ -251,7 +256,12 @@ const uzLatn = {
   orderStatusCancelled: 'bekor qilindi',
   statusUpdateProcessing: 'Buyurtmangiz №{id} tasdiqlandi va jo\'natishga tayyorlanmoqda ✅ Uni botdan bekor qilib bo\'lmaydi.',
   staffOrderCancelledByGuest: '❌ Mehmon buyurtma №{id}ni bekor qildi, summasi {total} — {name} ({contact})',
-  testNotifyMessage: "🔔 Rovena-CRM'dan test xabarnomasi — buni ko'rsangiz, chat_id to'g'ri kiritilgan."
+  testNotifyMessage: "🔔 Rovena-CRM'dan test xabarnomasi — buni ko'rsangiz, chat_id to'g'ri kiritilgan.",
+  btnStaffAcceptOrder: '✅ Buyurtmani qabul qilish',
+  btnStaffAcceptBooking: '✅ Bronni qabul qilish',
+  staffAcceptedToast: 'Qabul qilindi',
+  staffAcceptedBy: 'Qabul qildi: {name}',
+  staffUnknownName: 'xodim'
 }
 
 const uzCyrl = {
@@ -376,7 +386,12 @@ const uzCyrl = {
   orderStatusCancelled: 'бекор қилинди',
   statusUpdateProcessing: 'Буюртмангиз №{id} тасдиқланди ва жўнатишга тайёрланмоқда ✅ Уни ботдан бекор қилиб бўлмайди.',
   staffOrderCancelledByGuest: '❌ Меҳмон буюртма №{id}ни бекор қилди, суммаси {total} — {name} ({contact})',
-  testNotifyMessage: "🔔 Rovena-CRM'дан тест хабарномаси — буни кўрсангиз, chat_id тўғри киритилган."
+  testNotifyMessage: "🔔 Rovena-CRM'дан тест хабарномаси — буни кўрсангиз, chat_id тўғри киритилган.",
+  btnStaffAcceptOrder: '✅ Буюртмани қабул қилиш',
+  btnStaffAcceptBooking: '✅ Бронни қабул қилиш',
+  staffAcceptedToast: 'Қабул қилинди',
+  staffAcceptedBy: 'Қабул қилди: {name}',
+  staffUnknownName: 'ходим'
 }
 
 const DICTS = { ru, 'uz-latn': uzLatn, 'uz-cyrl': uzCyrl }

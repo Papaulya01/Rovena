@@ -275,7 +275,7 @@ export default {
     weekdaysShort: ['Du', 'Se', 'Cho', 'Pa', 'Ju', 'Sha', 'Ya'],
     access: 'Staff ga kirish huquqi',
     accessColumn: 'Kirish huquqi',
-    noAccess: "Huquq yo'q",
+    noAccess: "🔑 Kirish huquqini yaratish",
     accessNotNeeded: 'Kerak emas',
     accessNotNeededHint: "Ofitsiantda tizimga kirish huquqi yo'q — smenani ochish va CRM'da ishlash faqat kassirga tegishli",
     accessManage: 'Sozlash',

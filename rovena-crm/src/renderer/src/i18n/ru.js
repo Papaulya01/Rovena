@@ -275,7 +275,7 @@ export default {
     weekdaysShort: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
     access: 'Доступ в Staff',
     accessColumn: 'Доступ',
-    noAccess: 'Нет доступа',
+    noAccess: '🔑 Создать доступ',
     accessNotNeeded: 'Не требуется',
     accessNotNeededHint: 'У официанта нет доступа в систему — смену открывает и работает в CRM только кассир',
     accessManage: 'Настроить',

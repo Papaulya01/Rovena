@@ -643,7 +643,14 @@ async function notifyStaffNewBooking(booking) {
       name: booking.client_name || '—',
       contact: booking.client_contact || '—'
     }),
-    { reply_markup: { inline_keyboard: [contactClientRow(booking.client_contact, booking.bot_chat_id)] } }
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: t('ru', 'btnStaffAcceptBooking'), callback_data: `staffacceptbooking:${booking.id}` }],
+          contactClientRow(booking.client_contact, booking.bot_chat_id)
+        ]
+      }
+    }
   ).catch((e) => console.error('[rovena-bot] staff notify failed', e))
 }
 
@@ -654,8 +661,47 @@ async function notifyStaffNewOrder(order, name, contact) {
   await sendMessage(
     settings.notify_chat_id,
     t('ru', 'staffNewOrder', { id: order.id, total: formatMoney(order.total_amount), name: name || '—', contact: contact || '—' }),
-    { reply_markup: { inline_keyboard: [contactClientRow(contact, order.bot_chat_id)] } }
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: t('ru', 'btnStaffAcceptOrder'), callback_data: `staffacceptorder:${order.id}` }],
+          contactClientRow(contact, order.bot_chat_id)
+        ]
+      }
+    }
   ).catch((e) => console.error('[rovena-bot] staff notify failed', e))
+}
+
+/**
+ * Сотрудник принимает заказ/бронь прямо из группового чата (не только из
+ * панели кассира) — по прямой просьбе пользователя: "не только в Staff, но и
+ * в ТГ чтоб видели и принимали". Сообщение в группе редактируется — убираются
+ * кнопки и дописывается, кто принял (по имени из Telegram того, кто нажал).
+ */
+async function handleStaffAcceptOrder(cb) {
+  const orderId = Number((cb.data || '').split(':')[1])
+  const order = repo.updateOrder(orderId, { status: 'processing' }, `bot-staff:${cb.from?.username || cb.from?.id}`)
+  const acceptedBy = cb.from?.first_name || cb.from?.username || t('ru', 'staffUnknownName')
+  await answerCallback(cb.id, t('ru', 'staffAcceptedToast'))
+  const chatId = String(cb.message.chat.id)
+  const original = cb.message.text || ''
+  await editMessageText(chatId, cb.message.message_id, `${original}\n\n✅ ${t('ru', 'staffAcceptedBy', { name: acceptedBy })}`, {
+    reply_markup: { inline_keyboard: [] }
+  })
+  await notifyOrderStatus(order, 'processing')
+}
+
+async function handleStaffAcceptBooking(cb) {
+  const bookingId = Number((cb.data || '').split(':')[1])
+  const booking = repo.updateBooking(bookingId, { status: 'confirmed' }, `bot-staff:${cb.from?.username || cb.from?.id}`)
+  const acceptedBy = cb.from?.first_name || cb.from?.username || t('ru', 'staffUnknownName')
+  await answerCallback(cb.id, t('ru', 'staffAcceptedToast'))
+  const chatId = String(cb.message.chat.id)
+  const original = cb.message.text || ''
+  await editMessageText(chatId, cb.message.message_id, `${original}\n\n✅ ${t('ru', 'staffAcceptedBy', { name: acceptedBy })}`, {
+    reply_markup: { inline_keyboard: [] }
+  })
+  await notifyBookingStatus(booking, 'confirmed')
 }
 
 async function finalizeConfirm(chatId, session, callbackId) {
@@ -849,9 +895,21 @@ async function handleMessage(msg) {
 }
 
 async function handleCallback(cb) {
+  const data = cb.data || ''
+  // Клики персонала в групповом чате уведомлений — не часть диалога с гостем,
+  // обрабатываются отдельно, без создания/чтения сессии гостя для этого chat_id.
+  if (data.startsWith('staffacceptorder:')) {
+    await handleStaffAcceptOrder(cb)
+    return
+  }
+  if (data.startsWith('staffacceptbooking:')) {
+    await handleStaffAcceptBooking(cb)
+    return
+  }
+
   const chatId = String(cb.message.chat.id)
   const session = getSession(chatId)
-  const [prefix, value] = (cb.data || '').split(':')
+  const [prefix, value] = data.split(':')
 
   if (prefix === 'lang') {
     session.lang = value
