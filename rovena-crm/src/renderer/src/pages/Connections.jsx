@@ -2,36 +2,23 @@ import { useEffect, useState } from 'react'
 import Select from '../components/Select.jsx'
 import LiveClock from '../components/LiveClock.jsx'
 import { buildReceiptHtml } from '../utils/receipt.js'
+import { useI18n } from '../i18n/index.jsx'
 
-const LABELS = {
-  radmin_api: 'Radmin API',
-  rovena_staff: 'Rovena-Staff',
-  rovena_bot: 'Rovena-Bot',
-  regional: 'Дата и время',
-  printing: 'Печать чеков',
-  updates: 'Обновления',
-  modules: 'Модули'
+/** Подставляет {токены} шаблона как <code> — для инструкций вида "откройте {botfather}". */
+function interpolateCode(template, replacements) {
+  const regex = /\{(\w+)\}/g
+  const nodes = []
+  let lastIndex = 0
+  let match
+  let key = 0
+  while ((match = regex.exec(template))) {
+    if (match.index > lastIndex) nodes.push(template.slice(lastIndex, match.index))
+    nodes.push(<code key={key++}>{replacements[match[1]]}</code>)
+    lastIndex = regex.lastIndex
+  }
+  if (lastIndex < template.length) nodes.push(template.slice(lastIndex))
+  return nodes
 }
-
-const DESCRIPTIONS = {
-  radmin_api: 'Внешний статический API — источник данных по товарам/остаткам.',
-  rovena_staff: 'CRM выступает сервером: моноблок в точке подключается сюда по сети.',
-  rovena_bot: 'Телеграм-бот, которым управляет CRM: брони, заказы и меню для клиентов.',
-  regional: 'Часовой пояс и формат времени/даты — единые для CRM и панели кассира.',
-  printing: 'Принтер и параметры печати чека-копии заказа для панели кассира.',
-  updates: 'Проверка новых версий и установка обновлений CRM.',
-  modules: 'Подключаемые дополнения к CRM — раздел зарезервирован на будущее.'
-}
-
-const TIMEZONES = [
-  { value: 'Asia/Tashkent', label: 'Ташкент (UTC+5)' },
-  { value: 'Asia/Almaty', label: 'Алматы (UTC+6)' },
-  { value: 'Asia/Bishkek', label: 'Бишкек (UTC+6)' },
-  { value: 'Asia/Dushanbe', label: 'Душанбе (UTC+5)' },
-  { value: 'Asia/Ashgabat', label: 'Ашхабад (UTC+5)' },
-  { value: 'Europe/Moscow', label: 'Москва (UTC+3)' },
-  { value: 'UTC', label: 'UTC' }
-]
 
 function CopyChip({ value, placeholder }) {
   const [copied, setCopied] = useState(false)
@@ -58,16 +45,16 @@ function CopyChip({ value, placeholder }) {
   )
 }
 
-function AccordionItem({ name, statusDot, badge, children, open, onToggle }) {
+function AccordionItem({ name, statusDot, badge, children, open, onToggle, labels, descriptions }) {
   return (
     <div className={`accordion-item ${open ? 'open' : ''}`}>
       <button className="accordion-header" onClick={onToggle} type="button">
         <div className="accordion-title">
           <span className={`dot ${statusDot}`} />
           <div>
-            {LABELS[name] || name}
+            {labels[name] || name}
             {badge && <span className="tag tag-soon">{badge}</span>}
-            <div className="accordion-sub">{DESCRIPTIONS[name]}</div>
+            <div className="accordion-sub">{descriptions[name]}</div>
           </div>
         </div>
         <span className="accordion-chevron">▾</span>
@@ -78,6 +65,35 @@ function AccordionItem({ name, statusDot, badge, children, open, onToggle }) {
 }
 
 export default function Connections() {
+  const { t } = useI18n()
+  const LABELS = {
+    radmin_api: t('connections.labelRadmin'),
+    rovena_staff: t('connections.labelStaff'),
+    rovena_bot: t('connections.labelBot'),
+    regional: t('connections.labelRegional'),
+    printing: t('connections.labelPrinting'),
+    updates: t('connections.labelUpdates'),
+    modules: t('connections.labelModules')
+  }
+  const DESCRIPTIONS = {
+    radmin_api: t('connections.descRadmin'),
+    rovena_staff: t('connections.descStaff'),
+    rovena_bot: t('connections.descBot'),
+    regional: t('connections.descRegional'),
+    printing: t('connections.descPrinting'),
+    updates: t('connections.descUpdates'),
+    modules: t('connections.descModules')
+  }
+  const TIMEZONES = [
+    { value: 'Asia/Tashkent', label: 'Ташкент (UTC+5)' },
+    { value: 'Asia/Almaty', label: 'Алматы (UTC+6)' },
+    { value: 'Asia/Bishkek', label: 'Бишкек (UTC+6)' },
+    { value: 'Asia/Dushanbe', label: 'Душанбе (UTC+5)' },
+    { value: 'Asia/Ashgabat', label: 'Ашхабад (UTC+5)' },
+    { value: 'Europe/Moscow', label: 'Москва (UTC+3)' },
+    { value: 'UTC', label: 'UTC' }
+  ]
+
   const [connections, setConnections] = useState([])
   const [openName, setOpenName] = useState('rovena_staff')
   const [drafts, setDrafts] = useState({})
@@ -197,9 +213,7 @@ export default function Connections() {
           created_at: new Date().toISOString(),
           table_name: 'Тест',
           total_amount: 25000,
-          items: [
-            { name: 'Тестовая позиция', qty: 1, price: 25000 }
-          ]
+          items: [{ name: 'Тестовая позиция', qty: 1, price: 25000 }]
         },
         {
           companyName: 'Rovena — тестовая печать',
@@ -225,8 +239,8 @@ export default function Connections() {
     <div>
       <div className="page-header">
         <div>
-          <h1>Подключения</h1>
-          <p>Radmin API как источник данных, CRM как сервер для Staff, и управление ботом — всё в одном месте</p>
+          <h1>{t('connections.pageTitle')}</h1>
+          <p>{t('connections.pageSubtitle')}</p>
         </div>
       </div>
 
@@ -236,10 +250,12 @@ export default function Connections() {
           statusDot={radminConn.status || 'unknown'}
           open={openName === 'radmin_api'}
           onToggle={() => setOpenName(openName === 'radmin_api' ? null : 'radmin_api')}
+          labels={LABELS}
+          descriptions={DESCRIPTIONS}
         >
           <div className="form-row">
             <div>
-              <label>Base URL</label>
+              <label>{t('connections.baseUrl')}</label>
               <input
                 value={drafts.radmin_api?.base_url ?? ''}
                 onChange={(e) => setDraft('radmin_api', 'base_url', e.target.value)}
@@ -248,7 +264,7 @@ export default function Connections() {
               />
             </div>
             <div>
-              <label>API-ключ / токен</label>
+              <label>{t('connections.apiKeyToken')}</label>
               <input
                 type="password"
                 value={radminConn.api_key || ''}
@@ -261,22 +277,19 @@ export default function Connections() {
           </div>
           <div className="field-row">
             <button className="btn secondary" disabled={busy} onClick={testRadmin}>
-              Проверить подключение
+              {t('connections.testConnection')}
             </button>
             {radminTest && (
               <span style={{ fontSize: 12.5, color: radminTest.ok ? 'var(--income)' : 'var(--expense)' }}>
-                {radminTest.ok ? 'Отвечает' : `Не отвечает${radminTest.error ? ' — ' + radminTest.error : ''}`}
+                {radminTest.ok
+                  ? t('connections.responding')
+                  : `${t('connections.notResponding')}${radminTest.error ? ' — ' + radminTest.error : ''}`}
               </span>
             )}
           </div>
           <div className="instructions">
-            <h4>Логика подключения</h4>
-            Если это отдельный внешний источник данных (например, товары/остатки из другой системы) — CRM
-            ходит к нему как клиент: укажите базовый адрес и ключ, «Проверить подключение» делает контрольный
-            GET-запрос и обновляет статус. Если под «Radmin» имелся в виду Radmin VPN — это не API, а
-            программа удалённого доступа: она не настраивается здесь, а просто обеспечивает сетевой адрес,
-            который автоматически появляется в карточке «Rovena-Staff» ниже, когда запущена на этом
-            компьютере.
+            <h4>{t('connections.radminLogicTitle')}</h4>
+            {t('connections.radminLogicText')}
           </div>
         </AccordionItem>
 
@@ -285,14 +298,16 @@ export default function Connections() {
           statusDot={serverStatus.running ? 'online' : 'offline'}
           open={openName === 'rovena_staff'}
           onToggle={() => setOpenName(openName === 'rovena_staff' ? null : 'rovena_staff')}
+          labels={LABELS}
+          descriptions={DESCRIPTIONS}
         >
           <div className="server-panel">
             <div className="server-panel-row">
               <button className="btn" disabled={busy} onClick={toggleServer}>
-                {serverStatus.running ? 'Остановить сервер' : 'Запустить сервер'}
+                {serverStatus.running ? t('connections.stopServer') : t('connections.startServer')}
               </button>
               <div className="server-panel-field">
-                <label>Порт</label>
+                <label>{t('connections.port')}</label>
                 <input
                   type="number"
                   disabled={serverStatus.running}
@@ -304,54 +319,37 @@ export default function Connections() {
 
             {serverStatus.running && (
               <div className="server-panel-section">
-                <label>Адрес для Staff</label>
+                <label>{t('connections.addressForStaff')}</label>
                 <div className="address-list">
                   {serverStatus.urls.length > 0 ? (
                     serverStatus.urls.map((u) => (
                       <div className="address-row" key={u.url}>
                         <CopyChip value={u.url} />
                         <span className={`tag ${u.viaRadminVpn ? 'tag-vpn' : 'tag-lan'}`}>
-                          {u.viaRadminVpn ? 'Radmin VPN · из любой сети' : 'локальная сеть'}
+                          {u.viaRadminVpn ? t('connections.viaRadminVpn') : t('connections.localNetwork')}
                         </span>
                       </div>
                     ))
                   ) : (
-                    <span className="empty-hint">Не найден сетевой адрес — проверьте, что устройство в сети</span>
+                    <span className="empty-hint">{t('connections.noNetworkAddress')}</span>
                   )}
                 </div>
               </div>
             )}
 
             <div className="server-panel-section">
-              <span className="empty-hint">
-                API-ключ теперь свой у каждого заведения — смотрите и перевыпускайте в разделе «Заведения».
-              </span>
+              <span className="empty-hint">{t('connections.apiKeyPerVenueHint')}</span>
             </div>
           </div>
 
           <div className="instructions">
-            <h4>Как подключить Rovena-Staff</h4>
+            <h4>{t('connections.staffHowToTitle')}</h4>
             <ol>
-              <li>
-                В одной локальной сети (Wi-Fi/кабель) — просто нажмите «Запустить сервер» и используйте
-                локальный адрес. В разных сетях (например, этот компьютер — не в точке продаж) — установите
-                Radmin VPN на оба устройства и подключите их к одной виртуальной сети; тогда появится
-                адрес с пометкой «через Radmin VPN», который работает откуда угодно, пока CRM открыта.
-              </li>
-              <li>В настройках Staff укажите нужный адрес и вставьте API-ключ заведения из раздела «Заведения».</li>
-              <li>
-                Сервер и ключ сохраняются — при следующем запуске CRM сервер поднимется сам, ничего
-                нажимать заново не нужно.
-              </li>
-              <li>
-                После первого запроса от Staff статус подключения станет «online» — это видно по индикатору
-                слева от названия.
-              </li>
-              <li>
-                Если адрес через Radmin VPN не отвечает — проверьте брандмауэр Windows: при первом запуске
-                сервера он может спросить разрешение, важно разрешить доступ и для «частных», и для
-                «общественных» сетей.
-              </li>
+              <li>{t('connections.staffHowTo1')}</li>
+              <li>{t('connections.staffHowTo2')}</li>
+              <li>{t('connections.staffHowTo3')}</li>
+              <li>{t('connections.staffHowTo4')}</li>
+              <li>{t('connections.staffHowTo5')}</li>
             </ol>
           </div>
         </AccordionItem>
@@ -361,10 +359,12 @@ export default function Connections() {
           statusDot={botStatus.running ? 'online' : 'offline'}
           open={openName === 'rovena_bot'}
           onToggle={() => setOpenName(openName === 'rovena_bot' ? null : 'rovena_bot')}
+          labels={LABELS}
+          descriptions={DESCRIPTIONS}
         >
           <div className="form-row">
             <div>
-              <label>Токен бота (от @BotFather)</label>
+              <label>{t('connections.botTokenLabel')}</label>
               <input
                 type="password"
                 disabled={botStatus.running}
@@ -380,34 +380,29 @@ export default function Connections() {
 
           <div className="field-row">
             <button className="btn" disabled={busy} onClick={toggleBot}>
-              {botStatus.running ? 'Остановить бота' : 'Запустить бота'}
+              {botStatus.running ? t('connections.stopBot') : t('connections.startBot')}
             </button>
             {botStatus.running && botStatus.username && (
               <span style={{ fontSize: 12.5, color: 'var(--income)' }}>
-                Работает как @{botStatus.username}
+                {t('connections.workingAs')} @{botStatus.username}
               </span>
             )}
             {botStatus.lastError && (
-              <span style={{ fontSize: 12.5, color: 'var(--expense)' }}>Ошибка: {botStatus.lastError}</span>
+              <span style={{ fontSize: 12.5, color: 'var(--expense)' }}>
+                {t('connections.error')}: {botStatus.lastError}
+              </span>
             )}
           </div>
 
           <div className="instructions">
-            <h4>Как получить токен и запустить бота</h4>
+            <h4>{t('connections.botHowToTitle')}</h4>
             <ol>
-              <li>
-                В Telegram откройте <code>@BotFather</code>, отправьте <code>/newbot</code> и следуйте
-                подсказкам (имя и username бота).
-              </li>
-              <li>BotFather пришлёт токен вида <code>123456789:AA...</code> — вставьте его в поле выше.</li>
-              <li>Нажмите «Запустить бота» — CRM подключится к Telegram и начнёт отвечать на сообщения.</li>
-              <li>
-                Проверьте в Telegram: напишите боту <code>/start</code>, затем <code>/menu</code> — придёт
-                список позиций из раздела «Меню».
-              </li>
+              <li>{interpolateCode(t('connections.botHowTo1'), { botfather: '@BotFather', newbot: '/newbot' })}</li>
+              <li>{interpolateCode(t('connections.botHowTo2'), { sample: '123456789:AA...' })}</li>
+              <li>{t('connections.botHowTo3')}</li>
+              <li>{interpolateCode(t('connections.botHowTo4'), { start: '/start', menu: '/menu' })}</li>
             </ol>
-            Приём заказов и броней прямо через бота — следующий шаг (зависит от решения: обычный бот или
-            Mini App, см. открытые вопросы ТЗ). Сейчас бот отвечает на команды и показывает меню.
+            {t('connections.botFooterNote')}
           </div>
         </AccordionItem>
 
@@ -416,12 +411,14 @@ export default function Connections() {
           statusDot="unknown"
           open={openName === 'regional'}
           onToggle={() => setOpenName(openName === 'regional' ? null : 'regional')}
+          labels={LABELS}
+          descriptions={DESCRIPTIONS}
         >
           {regionalSettings && (
             <>
               <div className="form-row">
                 <div>
-                  <label>Часовой пояс</label>
+                  <label>{t('connections.timezone')}</label>
                   <Select
                     value={regionalSettings.timezone}
                     onChange={(v) => saveRegionalSetting('timezone', v)}
@@ -429,41 +426,39 @@ export default function Connections() {
                   />
                 </div>
                 <div>
-                  <label>Формат времени</label>
+                  <label>{t('connections.timeFormat')}</label>
                   <Select
                     value={regionalSettings.time_format}
                     onChange={(v) => saveRegionalSetting('time_format', v)}
                     options={[
-                      { value: '24h', label: '24-часовой (14:30)' },
-                      { value: '12h', label: '12-часовой (2:30 PM)' }
+                      { value: '24h', label: t('connections.format24') },
+                      { value: '12h', label: t('connections.format12') }
                     ]}
                   />
                 </div>
               </div>
               <div className="form-row">
                 <div>
-                  <label>Формат даты</label>
+                  <label>{t('connections.dateFormat')}</label>
                   <Select
                     value={regionalSettings.date_format}
                     onChange={(v) => saveRegionalSetting('date_format', v)}
                     options={[
-                      { value: 'dmy', label: 'ДД.ММ.ГГГГ (31.12.2026)' },
-                      { value: 'ymd', label: 'ГГГГ-ММ-ДД (2026-12-31)' }
+                      { value: 'dmy', label: t('connections.formatDmy') },
+                      { value: 'ymd', label: t('connections.formatYmd') }
                     ]}
                   />
                 </div>
                 <div>
-                  <label>Сейчас</label>
+                  <label>{t('connections.now')}</label>
                   <div className="server-panel" style={{ padding: '10px 14px' }}>
                     <LiveClock timezone={regionalSettings.timezone} timeFormat={regionalSettings.time_format} />
                   </div>
                 </div>
               </div>
               <div className="instructions">
-                <h4>Как это используется</h4>
-                Часовой пояс и формат задаются один раз здесь и применяются во всей CRM и в панели кассира
-                (Rovena-Staff) — открытие/закрытие смены, отметки времени заказов и часы в панели кассира
-                используют эти настройки, а не часы конкретного устройства.
+                <h4>{t('connections.regionalHowTitle')}</h4>
+                {t('connections.regionalHowText')}
               </div>
             </>
           )}
@@ -474,16 +469,18 @@ export default function Connections() {
           statusDot="unknown"
           open={openName === 'printing'}
           onToggle={() => setOpenName(openName === 'printing' ? null : 'printing')}
+          labels={LABELS}
+          descriptions={DESCRIPTIONS}
         >
           {printerSettings && (
             <>
               <div className="form-row">
                 <div>
-                  <label>Принтер</label>
+                  <label>{t('connections.printer')}</label>
                   <Select
                     value={printerSettings.printer_name || ''}
                     onChange={(v) => savePrinterSetting('printer_name', v)}
-                    placeholder="По умолчанию в системе"
+                    placeholder={t('connections.printerDefault')}
                     options={printers.map((p) => ({
                       value: p.name,
                       label: p.displayName || p.name
@@ -491,14 +488,14 @@ export default function Connections() {
                   />
                 </div>
                 <div>
-                  <label>Ширина чека</label>
+                  <label>{t('connections.receiptWidth')}</label>
                   <Select
                     value={printerSettings.receipt_width}
                     onChange={(v) => savePrinterSetting('receipt_width', v)}
                     options={[
-                      { value: '58mm', label: '58 мм (термопринтер)' },
-                      { value: '80mm', label: '80 мм (термопринтер)' },
-                      { value: 'a4', label: 'A4 (обычный принтер)' }
+                      { value: '58mm', label: t('connections.width58') },
+                      { value: '80mm', label: t('connections.width80') },
+                      { value: 'a4', label: t('connections.widthA4') }
                     ]}
                   />
                 </div>
@@ -510,7 +507,7 @@ export default function Connections() {
                     checked={!!printerSettings.auto_print}
                     onChange={(e) => savePrinterSetting('auto_print', e.target.checked ? 1 : 0)}
                   />
-                  Печатать чек автоматически при пробитии заказа
+                  {t('connections.autoPrintLabel')}
                 </label>
               </div>
               <div className="field-row">
@@ -520,27 +517,24 @@ export default function Connections() {
                     checked={!!printerSettings.silent_print}
                     onChange={(e) => savePrinterSetting('silent_print', e.target.checked ? 1 : 0)}
                   />
-                  Печатать без диалога подтверждения Windows
+                  {t('connections.silentPrintLabel')}
                 </label>
               </div>
               <div className="field-row">
                 <button className="btn secondary" disabled={busy} onClick={testPrint}>
-                  Тестовая печать
+                  {t('connections.testPrint')}
                 </button>
                 {testPrintResult && (
                   <span style={{ fontSize: 12.5, color: testPrintResult.success ? 'var(--income)' : 'var(--expense)' }}>
-                    {testPrintResult.success ? 'Отправлено на печать' : `Не удалось: ${testPrintResult.reason || '—'}`}
+                    {testPrintResult.success
+                      ? t('connections.sentToPrint')
+                      : `${t('connections.printFailed')}: ${testPrintResult.reason || '—'}`}
                   </span>
                 )}
               </div>
               <div className="instructions">
-                <h4>Важно: это не фискальный чек</h4>
-                Кнопка «Чек» в панели кассира печатает копию заказа на обычном принтере — в том числе на
-                чековом термопринтере, если для него установлен Windows-драйвер (тогда он появится в списке
-                выше как обычный принтер). Это не фискализация: для соответствия требованиям онлайн-ККМ
-                (передача данных в ОФД — оператор фискальных данных) нужен отдельный сертифицированный
-                фискальный модуль или кассовый аппарат от лицензированного поставщика в Узбекистане. CRM
-                фискальные чеки не формирует и данные в ОФД не передаёт.
+                <h4>{t('connections.notFiscalTitle')}</h4>
+                {t('connections.notFiscalText')}
               </div>
             </>
           )}
@@ -551,25 +545,29 @@ export default function Connections() {
           statusDot={updater.state === 'available' || updater.state === 'downloaded' ? 'online' : 'unknown'}
           open={openName === 'updates'}
           onToggle={() => setOpenName(openName === 'updates' ? null : 'updates')}
+          labels={LABELS}
+          descriptions={DESCRIPTIONS}
         >
           <div className="server-panel-row" style={{ marginBottom: 12 }}>
             <div>
-              Текущая версия: <strong>{updater.currentVersion || '—'}</strong>
+              {t('connections.currentVersion')}: <strong>{updater.currentVersion || '—'}</strong>
             </div>
             <button className="btn secondary" disabled={checkingUpdate} onClick={checkUpdates}>
-              {checkingUpdate ? 'Проверяем...' : 'Проверить обновления'}
+              {checkingUpdate ? t('connections.checking') : t('connections.checkUpdates')}
             </button>
           </div>
 
           {updater.state === 'not-available' && (
-            <div className="empty-hint">Установлена последняя версия.</div>
+            <div className="empty-hint">{t('connections.latestInstalled')}</div>
           )}
 
           {(updater.state === 'available' || updater.state === 'downloading' || updater.state === 'downloaded') &&
             updater.info && (
               <div className="server-panel" style={{ marginBottom: 12 }}>
                 <div className="server-panel-row">
-                  <strong>Доступна версия {updater.info.version}</strong>
+                  <strong>
+                    {t('connections.versionAvailable')} {updater.info.version}
+                  </strong>
                 </div>
                 {updater.info.releaseNotes && (
                   <div
@@ -578,7 +576,7 @@ export default function Connections() {
                       __html:
                         typeof updater.info.releaseNotes === 'string'
                           ? updater.info.releaseNotes
-                          : 'Список изменений недоступен'
+                          : t('connections.changelogUnavailable')
                     }}
                   />
                 )}
@@ -587,7 +585,7 @@ export default function Connections() {
 
           {updater.state === 'available' && (
             <button className="btn" onClick={() => window.rovena.updater.download()}>
-              Скачать обновление
+              {t('connections.downloadUpdate')}
             </button>
           )}
 
@@ -597,41 +595,41 @@ export default function Connections() {
                 <div className="progress-bar-fill" style={{ width: `${updater.progress?.percent || 0}%` }} />
               </div>
               <div className="empty-hint">
-                Загрузка: {Math.round(updater.progress?.percent || 0)}% — не закрывайте приложение, пока
-                загрузка не завершится.
+                {t('connections.downloading')}: {Math.round(updater.progress?.percent || 0)}%{' '}
+                {t('connections.dontCloseWhileDownloading')}
               </div>
             </div>
           )}
 
           {updater.state === 'downloaded' && (
             <button className="btn" onClick={() => window.rovena.updater.install()}>
-              Установить и перезапустить
+              {t('connections.installAndRestart')}
             </button>
           )}
 
           {updater.state === 'error' && (
-            <div className="empty-hint" style={{ color: 'var(--expense)' }}>Ошибка проверки обновлений: {updater.error}</div>
+            <div className="empty-hint" style={{ color: 'var(--expense)' }}>
+              {t('connections.updateCheckError')}: {updater.error}
+            </div>
           )}
 
           <div className="instructions">
-            <h4>Как это работает</h4>
-            CRM проверяет новые версии в GitHub Releases проекта. Когда версия доступна, здесь появляется
-            список изменений — сначала можно посмотреть, что нового, и только потом нажать «Скачать
-            обновление». После загрузки установка происходит по кнопке «Установить и перезапустить» — CRM
-            закроется и переустановится на новую версию автоматически, без обычного окна установщика.
+            <h4>{t('connections.updatesHowTitle')}</h4>
+            {t('connections.updatesHowText')}
           </div>
         </AccordionItem>
 
         <AccordionItem
           name="modules"
           statusDot="unknown"
-          badge="в разработке"
+          badge={t('connections.inDevelopment')}
           open={openName === 'modules'}
           onToggle={() => setOpenName(openName === 'modules' ? null : 'modules')}
+          labels={LABELS}
+          descriptions={DESCRIPTIONS}
         >
           <div className="empty-state" style={{ padding: '20px 0' }}>
-            Здесь появятся включаемые модули CRM (например, программа лояльности, акции, интеграции) —
-            список и настройки конкретных модулей ещё не определены.
+            {t('connections.modulesEmptyState')}
           </div>
         </AccordionItem>
       </div>
