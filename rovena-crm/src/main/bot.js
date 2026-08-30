@@ -1,13 +1,18 @@
 import * as repo from './repo.js'
+import { t } from './botMessages.js'
 
 /**
- * Управление Rovena-Bot из CRM: long-polling клиент к Telegram Bot API.
- * MVP: /start приветствие, /menu — каталог из CRM (та же таблица menu_items,
- * что видит и Staff). Приём заказов/броней через бота — открытый вопрос ТЗ
- * (обычный бот vs Mini App), сюда добавится после решения.
+ * Rovena-Bot (Telegram, long-polling) — полноценный сценарий для гостя:
+ * язык → инструкция → регистрация/заказ/бронирование, с корзиной из каталога
+ * CRM, выбором стола/времени/доставки и оплатой наличными (задел под QR).
+ * Состояние диалога держится в памяти процесса (sessions) — переживает
+ * только текущий запуск бота; данные клиента (язык/имя/телефон) и все
+ * созданные брони/заказы, конечно, в БД и переживают перезапуск.
+ * Бот пока общий на все заведения — работает с первым активным (defaultVenueId).
  */
 
 const TELEGRAM_API = 'https://api.telegram.org/bot'
+const REMINDER_CHECK_MS = 60000
 
 let running = false
 let botToken = null
@@ -15,9 +20,21 @@ let botUsername = null
 let lastError = null
 let pollAbort = null
 let offset = 0
+let reminderInterval = null
+
+const sessions = new Map()
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
+}
+
+function formatMoney(n) {
+  return `${new Intl.NumberFormat('ru-RU').format(Math.round(Number(n) || 0))} сум`
+}
+
+function formatTimeLabel(iso) {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 async function callApi(method, params) {
@@ -32,67 +49,719 @@ async function callApi(method, params) {
   return data.result
 }
 
+// По умолчанию без HTML-разметки — большинство сообщений подставляют текст,
+// который ввёл сам гость (имя, адрес доставки и т.д.), и Telegram отклонит
+// сообщение целиком при "битой" HTML-сущности. parse_mode: 'HTML' указывается
+// точечно там, где реально нужна разметка (сейчас — только showMenuReadonly),
+// и там весь пользовательский ввод уже пропущен через escapeHtml.
+function sendMessage(chatId, text, extra = {}) {
+  return callApi('sendMessage', { chat_id: chatId, text, ...extra })
+}
+
+function editMessageText(chatId, messageId, text, extra = {}) {
+  return callApi('editMessageText', { chat_id: chatId, message_id: messageId, text, ...extra }).catch(() => {})
+}
+
+function answerCallback(id, text) {
+  return callApi('answerCallbackQuery', { callback_query_id: id, text, show_alert: false }).catch(() => {})
+}
+
+async function sendPaymentQr(chatId, dataUrl) {
+  const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '')
+  if (!match) return
+  try {
+    const buffer = Buffer.from(match[2], 'base64')
+    const form = new FormData()
+    form.append('chat_id', String(chatId))
+    form.append('photo', new Blob([buffer], { type: match[1] }), 'qr.png')
+    const res = await fetch(`${TELEGRAM_API}${botToken}/sendPhoto`, { method: 'POST', body: form })
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.description)
+  } catch (e) {
+    console.error('[rovena-bot] sendPaymentQr failed', e)
+  }
+}
+
+function inlineKb(rows) {
+  return { inline_keyboard: rows.map((row) => row.map(([text, data]) => ({ text, callback_data: data }))) }
+}
+
+function replyKb(rows) {
+  return { keyboard: rows.map((row) => row.map((label) => ({ text: label }))), resize_keyboard: true }
+}
+
 // Бот пока общий на все заведения (не выбирает конкретное) — показывает первое
-// активное; венue-маршрутизация для бота — отдельный вопрос ТЗ (см. Mini App).
+// активное; venue-маршрутизация для бота — отдельный вопрос ТЗ (см. Mini App).
 function defaultVenueId() {
   const venue = repo.listVenues().find((v) => v.is_active)
   return venue?.id ?? null
 }
 
-function formatTablesMessage() {
-  const venueId = defaultVenueId()
-  const tables = venueId ? repo.listTables(venueId, { activeOnly: true }) : []
-  if (tables.length === 0) return 'Столы пока не заведены — загляните позже.'
-  return tables
-    .map((t) => `• ${escapeHtml(t.name)} — на ${t.capacity}${t.zone ? `, ${escapeHtml(t.zone)}` : ''}`)
-    .join('\n')
+function freshSession(customer) {
+  return {
+    step: customer ? 'menu' : 'lang',
+    lang: customer?.language || 'ru',
+    cart: [],
+    orderMode: null, // dinein | delivery
+    tableId: null,
+    tableName: null,
+    deliveryAddress: null,
+    bookingOnly: false,
+    arrivalIso: null, // null = "сейчас/как можно скорее"
+    regName: null,
+    currentCategoryId: null,
+    menuMessageId: null
+  }
 }
 
-function formatMenuMessage() {
+function getSession(chatId) {
+  let s = sessions.get(chatId)
+  if (!s) {
+    s = freshSession(repo.getBotCustomer(chatId))
+    sessions.set(chatId, s)
+  }
+  return s
+}
+
+function tr(session, key, vars) {
+  return t(session.lang, key, vars)
+}
+
+function cartCount(session) {
+  return session.cart.reduce((sum, c) => sum + c.qty, 0)
+}
+
+function mainMenuKeyboard(session) {
+  return replyKb([
+    [tr(session, 'btnOrder'), tr(session, 'btnBook')],
+    [tr(session, 'btnTables'), tr(session, 'btnMenu')],
+    [tr(session, 'btnRegister'), tr(session, 'btnLang')],
+    [tr(session, 'btnHelp')]
+  ])
+}
+
+async function showMainMenu(chatId, session) {
+  session.step = 'menu'
+  session.cart = []
+  session.orderMode = null
+  session.tableId = null
+  session.tableName = null
+  session.deliveryAddress = null
+  session.bookingOnly = false
+  session.arrivalIso = null
+  session.currentCategoryId = null
+  session.menuMessageId = null
+  await sendMessage(chatId, tr(session, 'backToMenu'), { reply_markup: mainMenuKeyboard(session) })
+}
+
+async function sendLangPrompt(chatId) {
+  await callApi('sendMessage', {
+    chat_id: chatId,
+    text: t('ru', 'langPrompt'),
+    reply_markup: inlineKb([
+      [['Русский', 'lang:ru']],
+      [["O'zbekcha (lotin)", 'lang:uz-latn']],
+      [['Ўзбекча (кирилл)', 'lang:uz-cyrl']]
+    ])
+  })
+}
+
+// ---------- Регистрация ----------
+
+async function startRegistration(chatId, session) {
+  const customer = repo.getBotCustomer(chatId)
+  if (customer?.full_name && customer?.phone) {
+    await sendMessage(chatId, tr(session, 'regAlready', { name: customer.full_name, phone: customer.phone }), {
+      reply_markup: inlineKb([
+        [[tr(session, 'btnUpdateReg'), 'reg:update']],
+        [[tr(session, 'btnCancel'), 'reg:cancel']]
+      ])
+    })
+    return
+  }
+  session.step = 'reg_name'
+  await sendMessage(chatId, tr(session, 'regAskName'), { reply_markup: { remove_keyboard: true } })
+}
+
+async function askPhone(chatId, session) {
+  session.step = 'reg_phone'
+  await sendMessage(chatId, tr(session, 'regAskPhone', { name: session.regName }), {
+    reply_markup: {
+      keyboard: [[{ text: tr(session, 'btnShareContact'), request_contact: true }]],
+      resize_keyboard: true,
+      one_time_keyboard: true
+    }
+  })
+}
+
+async function finishRegistration(chatId, session, phone) {
+  repo.upsertBotCustomer(chatId, { full_name: session.regName, phone, language: session.lang })
+  await sendMessage(chatId, tr(session, 'regDone', { name: session.regName, phone }), {
+    reply_markup: { remove_keyboard: true }
+  })
+  await showMainMenu(chatId, session)
+}
+
+// ---------- Столы / меню (просмотр) ----------
+
+async function showTables(chatId, session) {
+  const venueId = defaultVenueId()
+  const statuses = venueId ? repo.tableStatuses(venueId) : []
+  if (statuses.length === 0) {
+    await sendMessage(chatId, tr(session, 'noTables'))
+    return
+  }
+  const lines = statuses
+    .map((tb) => {
+      const label =
+        tb.status === 'free' ? tr(session, 'tableFree') : tb.status === 'reserved' ? tr(session, 'tableReserved') : tr(session, 'tableOccupied')
+      return `• ${escapeHtml(tb.name)} (${tb.capacity}) — ${label}`
+    })
+    .join('\n')
+  await sendMessage(chatId, `${tr(session, 'tablesList')}\n${lines}`)
+}
+
+async function showMenuReadonly(chatId, session) {
   const venueId = defaultVenueId()
   const items = venueId ? repo.listMenuItems(venueId, { activeOnly: true }) : []
-  if (items.length === 0) return 'Меню пока не заполнено — загляните позже.'
-  const byCategory = new Map()
+  if (items.length === 0) {
+    await sendMessage(chatId, tr(session, 'noMenu'))
+    return
+  }
+  const byCat = new Map()
   for (const item of items) {
-    const cat = item.category_name || 'Без категории'
-    if (!byCategory.has(cat)) byCategory.set(cat, [])
-    byCategory.get(cat).push(item)
+    const cat = item.category_name || '—'
+    if (!byCat.has(cat)) byCat.set(cat, [])
+    byCat.get(cat).push(item)
   }
   let text = ''
-  for (const [cat, catItems] of byCategory) {
+  for (const [cat, catItems] of byCat) {
     text += `\n<b>${escapeHtml(cat)}</b>\n`
-    for (const item of catItems) {
-      text += `• ${escapeHtml(item.name)} — ${item.price}\n`
-    }
+    for (const item of catItems) text += `• ${escapeHtml(item.name)} — ${formatMoney(item.price)}\n`
   }
-  return text.trim()
+  await sendMessage(chatId, text.trim(), { parse_mode: 'HTML' })
+}
+
+// ---------- Выбор стола ----------
+
+async function showTablePicker(chatId, session) {
+  const venueId = defaultVenueId()
+  const statuses = venueId ? repo.tableStatuses(venueId) : []
+  if (statuses.length === 0) {
+    await sendMessage(chatId, tr(session, 'noTables'))
+    await showMainMenu(chatId, session)
+    return
+  }
+  const rows = statuses.map((tb) => {
+    const emoji = tb.status === 'free' ? '🟢' : tb.status === 'reserved' ? '🟡' : '🔴'
+    return [[`${emoji} ${tb.name} (${tb.capacity})`, `tbl:${tb.id}`]]
+  })
+  await sendMessage(chatId, tr(session, 'chooseTable'), { reply_markup: inlineKb(rows) })
+}
+
+// ---------- Заказ: тип и корзина ----------
+
+async function startOrder(chatId, session) {
+  session.cart = []
+  session.tableId = null
+  session.deliveryAddress = null
+  session.bookingOnly = false
+  session.step = 'order_type'
+  await sendMessage(chatId, tr(session, 'orderTypePrompt'), {
+    reply_markup: inlineKb([[[tr(session, 'btnDineIn'), 'otype:dinein'], [tr(session, 'btnDelivery'), 'otype:delivery']]])
+  })
+}
+
+async function startBookingEntry(chatId, session) {
+  session.cart = []
+  session.tableId = null
+  session.deliveryAddress = null
+  session.step = 'book_choice'
+  await sendMessage(chatId, tr(session, 'bookOnlyOrOrderPrompt'), {
+    reply_markup: inlineKb([
+      [[tr(session, 'btnBookWithOrder'), 'book:withorder'], [tr(session, 'btnBookOnly'), 'book:only']]
+    ])
+  })
+}
+
+function categoryListView(session) {
+  const venueId = defaultVenueId()
+  const categories = repo.listCategories(venueId)
+  const items = repo.listMenuItems(venueId, { activeOnly: true })
+  const withItems = categories.filter((c) => items.some((i) => i.category_id === c.id))
+  const rows = withItems.map((c) => [[c.name, `cat:${c.id}`]])
+  if (session.cart.length) rows.push([[tr(session, 'btnCartDone', { count: cartCount(session) }), 'cart:done']])
+  return { text: tr(session, 'menuTitle'), keyboard: inlineKb(rows), empty: withItems.length === 0 }
+}
+
+function categoryItemsView(session, categoryId) {
+  const venueId = defaultVenueId()
+  const cat = repo.listCategories(venueId).find((c) => c.id === categoryId)
+  const items = repo.listMenuItems(venueId, { activeOnly: true }).filter((i) => i.category_id === categoryId)
+  const rows = items.map((i) => [[`${i.name} — ${formatMoney(i.price)}`, `item:${i.id}`]])
+  rows.push([[tr(session, 'btnCategories'), 'cart:categories']])
+  if (session.cart.length) rows.push([[tr(session, 'btnCartDone', { count: cartCount(session) }), 'cart:done']])
+  return { text: tr(session, 'categoryPrompt', { category: cat?.name || '' }), keyboard: inlineKb(rows) }
+}
+
+async function openMenuBrowsing(chatId, session) {
+  const view = categoryListView(session)
+  if (view.empty) {
+    await sendMessage(chatId, tr(session, 'noMenu'))
+    await showMainMenu(chatId, session)
+    return
+  }
+  session.currentCategoryId = null
+  session.step = 'order_menu'
+  const sent = await sendMessage(chatId, view.text, { reply_markup: view.keyboard })
+  session.menuMessageId = sent.message_id
+}
+
+async function renderCurrentMenuView(chatId, session) {
+  const view = session.currentCategoryId ? categoryItemsView(session, session.currentCategoryId) : categoryListView(session)
+  await editMessageText(chatId, session.menuMessageId, view.text, { reply_markup: view.keyboard })
+}
+
+async function addToCartAndRefresh(chatId, session, itemId, callbackId) {
+  const venueId = defaultVenueId()
+  const item = repo.listMenuItems(venueId).find((i) => i.id === itemId)
+  if (!item) {
+    await answerCallback(callbackId)
+    return
+  }
+  const existing = session.cart.find((c) => c.menu_item_id === item.id)
+  if (existing) existing.qty += 1
+  else session.cart.push({ menu_item_id: item.id, name: item.name, price: item.price, qty: 1 })
+  await answerCallback(callbackId, tr(session, 'cartAdded', { name: item.name, qty: existing ? existing.qty : 1 }))
+  await renderCurrentMenuView(chatId, session)
+}
+
+// ---------- Время прибытия / доставки ----------
+
+async function promptTime(chatId, session) {
+  session.step = 'order_time'
+  await sendMessage(chatId, tr(session, 'timePrompt'), {
+    reply_markup: inlineKb([
+      [[tr(session, 'btnTimeNow'), 'time:now']],
+      [[tr(session, 'btnTimeIn30'), 'time:30'], [tr(session, 'btnTimeIn60'), 'time:60']],
+      [[tr(session, 'btnTimeIn120'), 'time:120']],
+      [[tr(session, 'btnTimeCustom'), 'time:custom']]
+    ])
+  })
+}
+
+async function handleCustomTime(chatId, session, text) {
+  const m = text.match(/^(\d{1,2}):(\d{2})$/)
+  const hh = m ? Number(m[1]) : NaN
+  const mm = m ? Number(m[2]) : NaN
+  if (!m || hh > 23 || mm > 59) {
+    await sendMessage(chatId, tr(session, 'timeCustomBad'))
+    return
+  }
+  const now = new Date()
+  const arrival = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm)
+  if (arrival < now) arrival.setDate(arrival.getDate() + 1)
+  session.arrivalIso = arrival.toISOString()
+  await showConfirm(chatId, session)
+}
+
+// ---------- Подтверждение и создание брони/заказа ----------
+
+async function showConfirm(chatId, session) {
+  session.step = session.bookingOnly ? 'book_confirm' : 'order_confirm'
+  const venueId = defaultVenueId()
+  const botSettings = venueId ? repo.getBotSettings(venueId) : null
+
+  let text = session.bookingOnly ? tr(session, 'bookingConfirmTitle') : tr(session, 'orderConfirmTitle')
+  text +=
+    '\n' +
+    (session.orderMode === 'delivery'
+      ? tr(session, 'orderConfirmDelivery', { address: session.deliveryAddress })
+      : tr(session, 'orderConfirmTable', { table: session.tableName }))
+
+  const timeLabel = session.arrivalIso ? formatTimeLabel(session.arrivalIso) : tr(session, 'orderConfirmTimeNow')
+  text += '\n' + tr(session, 'orderConfirmTime', { time: timeLabel })
+
+  if (!session.bookingOnly) {
+    const lines = session.cart.map((c) => `${c.name} ×${c.qty} — ${formatMoney(c.price * c.qty)}`).join('\n')
+    const total = session.cart.reduce((sum, c) => sum + c.price * c.qty, 0)
+    text += '\n\n' + tr(session, 'cartSummary', { lines, total: formatMoney(total) })
+    text += '\n' + (botSettings?.payment_qr ? tr(session, 'orderConfirmPaymentQr') : tr(session, 'orderConfirmPayment'))
+  }
+
+  await sendMessage(chatId, text, {
+    reply_markup: inlineKb([[[tr(session, 'btnConfirm'), 'confirm:yes'], [tr(session, 'btnCancel'), 'confirm:no']]])
+  })
+  if (!session.bookingOnly && botSettings?.payment_qr) {
+    await sendPaymentQr(chatId, botSettings.payment_qr)
+  }
+}
+
+async function notifyStaffNewBooking(booking) {
+  const venueId = defaultVenueId()
+  const settings = venueId ? repo.getBotSettings(venueId) : null
+  if (!settings?.notify_chat_id || !settings.notify_new_booking) return
+  const table = repo.listTables(venueId).find((tb) => tb.id === booking.table_id)
+  await sendMessage(
+    settings.notify_chat_id,
+    t('ru', 'staffNewBooking', {
+      table: table?.name || '—',
+      time: formatTimeLabel(booking.date_from),
+      name: booking.client_name || '—',
+      contact: booking.client_contact || '—'
+    })
+  ).catch((e) => console.error('[rovena-bot] staff notify failed', e))
+}
+
+async function notifyStaffNewOrder(order, name, contact) {
+  const venueId = defaultVenueId()
+  const settings = venueId ? repo.getBotSettings(venueId) : null
+  if (!settings?.notify_chat_id || !settings.notify_new_order) return
+  await sendMessage(
+    settings.notify_chat_id,
+    t('ru', 'staffNewOrder', { id: order.id, total: formatMoney(order.total_amount), name: name || '—', contact: contact || '—' })
+  ).catch((e) => console.error('[rovena-bot] staff notify failed', e))
+}
+
+async function finalizeConfirm(chatId, session, callbackId) {
+  const venueId = defaultVenueId()
+  const customer = repo.getBotCustomer(chatId)
+  const clientName = customer?.full_name || null
+  const clientContact = customer?.phone || String(chatId)
+
+  if (session.bookingOnly) {
+    const dateFrom = session.arrivalIso || new Date().toISOString()
+    const booking = repo.createBooking(
+      venueId,
+      {
+        source: 'bot',
+        client_name: clientName,
+        client_contact: clientContact,
+        table_id: session.tableId,
+        date_from: dateFrom,
+        status: 'new',
+        bot_chat_id: chatId
+      },
+      'bot'
+    )
+    await answerCallback(callbackId)
+    await sendMessage(
+      chatId,
+      tr(session, 'bookingCreated', { time: session.arrivalIso ? formatTimeLabel(session.arrivalIso) : tr(session, 'orderConfirmTimeNow') })
+    )
+    await notifyStaffNewBooking(booking)
+  } else {
+    let bookingId = null
+    if (session.orderMode === 'dinein' && session.arrivalIso) {
+      const booking = repo.createBooking(
+        venueId,
+        {
+          source: 'bot',
+          client_name: clientName,
+          client_contact: clientContact,
+          table_id: session.tableId,
+          date_from: session.arrivalIso,
+          status: 'new',
+          bot_chat_id: chatId
+        },
+        'bot'
+      )
+      bookingId = booking.id
+      await notifyStaffNewBooking(booking)
+    }
+    const openShift = repo.getOpenShift(venueId) ?? null
+    const order = repo.createOrder(
+      venueId,
+      {
+        shift_id: openShift ? openShift.id : null,
+        source: 'bot',
+        delivery: session.orderMode === 'delivery' ? 1 : 0,
+        delivery_address: session.orderMode === 'delivery' ? session.deliveryAddress : null,
+        client_name: clientName,
+        client_contact: clientContact,
+        table_id: session.orderMode === 'dinein' ? session.tableId : null,
+        booking_id: bookingId,
+        payment_method: 'cash',
+        bot_chat_id: chatId,
+        items: session.cart.map((c) => ({ menu_item_id: c.menu_item_id, name: c.name, qty: c.qty, price: c.price }))
+      },
+      'bot'
+    )
+    await answerCallback(callbackId)
+    const timeLabel = session.arrivalIso ? formatTimeLabel(session.arrivalIso) : tr(session, 'orderConfirmTimeNow')
+    await sendMessage(
+      chatId,
+      bookingId
+        ? tr(session, 'bookingWithOrderCreated', { id: order.id, time: timeLabel })
+        : tr(session, 'orderCreated', { id: order.id })
+    )
+    await notifyStaffNewOrder(order, clientName, clientContact)
+  }
+  await showMainMenu(chatId, session)
+}
+
+// ---------- Роутинг сообщений ----------
+
+async function tryHandleQuickButton(chatId, session, text) {
+  if (text === tr(session, 'btnOrder')) {
+    await startOrder(chatId, session)
+    return true
+  }
+  if (text === tr(session, 'btnBook')) {
+    await startBookingEntry(chatId, session)
+    return true
+  }
+  if (text === tr(session, 'btnTables')) {
+    await showTables(chatId, session)
+    return true
+  }
+  if (text === tr(session, 'btnMenu')) {
+    await showMenuReadonly(chatId, session)
+    return true
+  }
+  if (text === tr(session, 'btnRegister')) {
+    await startRegistration(chatId, session)
+    return true
+  }
+  if (text === tr(session, 'btnLang')) {
+    session.step = 'lang'
+    await sendLangPrompt(chatId)
+    return true
+  }
+  if (text === tr(session, 'btnHelp')) {
+    await sendMessage(chatId, tr(session, 'instructions'))
+    return true
+  }
+  return false
+}
+
+async function handleMessage(msg) {
+  const chatId = String(msg.chat.id)
+  const session = getSession(chatId)
+  const text = msg.text?.trim()
+
+  if (text === '/start') {
+    const customer = repo.getBotCustomer(chatId)
+    if (!customer) {
+      session.step = 'lang'
+      await sendLangPrompt(chatId)
+    } else {
+      session.lang = customer.language
+      await sendMessage(chatId, tr(session, 'instructions'))
+      await showMainMenu(chatId, session)
+    }
+    return
+  }
+  if (text === '/id') {
+    await sendMessage(chatId, t('ru', 'idCommand', { chatId }))
+    return
+  }
+  if (msg.contact && session.step === 'reg_phone') {
+    await finishRegistration(chatId, session, msg.contact.phone_number)
+    return
+  }
+  if (!text) return
+
+  if (session.step !== 'lang' && session.step !== 'reg_name' && session.step !== 'reg_phone') {
+    if (await tryHandleQuickButton(chatId, session, text)) return
+  }
+
+  switch (session.step) {
+    case 'reg_name':
+      session.regName = text
+      await askPhone(chatId, session)
+      return
+    case 'reg_phone':
+      await finishRegistration(chatId, session, text)
+      return
+    case 'order_delivery_address':
+      session.deliveryAddress = text
+      await openMenuBrowsing(chatId, session)
+      return
+    case 'order_time_custom':
+      await handleCustomTime(chatId, session, text)
+      return
+    default:
+      await sendMessage(chatId, tr(session, 'unknownCommand'))
+  }
+}
+
+async function handleCallback(cb) {
+  const chatId = String(cb.message.chat.id)
+  const session = getSession(chatId)
+  const [prefix, value] = (cb.data || '').split(':')
+
+  if (prefix === 'lang') {
+    session.lang = value
+    repo.upsertBotCustomer(chatId, { language: value })
+    await answerCallback(cb.id, tr(session, 'langSet'))
+    await sendMessage(chatId, tr(session, 'instructions'))
+    await showMainMenu(chatId, session)
+    return
+  }
+
+  if (prefix === 'reg') {
+    await answerCallback(cb.id)
+    if (value === 'update') {
+      session.step = 'reg_name'
+      await sendMessage(chatId, tr(session, 'regAskName'), { reply_markup: { remove_keyboard: true } })
+    } else {
+      await showMainMenu(chatId, session)
+    }
+    return
+  }
+
+  if (prefix === 'otype') {
+    session.orderMode = value
+    await answerCallback(cb.id)
+    if (value === 'dinein') {
+      session.step = 'order_table'
+      await showTablePicker(chatId, session)
+    } else {
+      session.step = 'order_delivery_address'
+      await sendMessage(chatId, tr(session, 'askDeliveryAddress'))
+    }
+    return
+  }
+
+  if (prefix === 'book') {
+    session.orderMode = 'dinein'
+    session.bookingOnly = value !== 'withorder'
+    session.step = 'order_table'
+    await answerCallback(cb.id)
+    await showTablePicker(chatId, session)
+    return
+  }
+
+  if (prefix === 'tbl') {
+    const venueId = defaultVenueId()
+    const id = Number(value)
+    const table = repo.listTables(venueId).find((tb) => tb.id === id)
+    session.tableId = id
+    session.tableName = table?.name || '—'
+    await answerCallback(cb.id)
+    if (session.bookingOnly) await promptTime(chatId, session)
+    else await openMenuBrowsing(chatId, session)
+    return
+  }
+
+  if (prefix === 'cat') {
+    session.currentCategoryId = Number(value)
+    await answerCallback(cb.id)
+    await renderCurrentMenuView(chatId, session)
+    return
+  }
+
+  if (prefix === 'item') {
+    await addToCartAndRefresh(chatId, session, Number(value), cb.id)
+    return
+  }
+
+  if (prefix === 'cart') {
+    if (value === 'categories') {
+      session.currentCategoryId = null
+      await answerCallback(cb.id)
+      await renderCurrentMenuView(chatId, session)
+    } else if (value === 'done') {
+      if (session.cart.length === 0) {
+        await answerCallback(cb.id, tr(session, 'emptyCartError'))
+        return
+      }
+      await answerCallback(cb.id)
+      if (session.orderMode === 'delivery') {
+        session.arrivalIso = null
+        await showConfirm(chatId, session)
+      } else {
+        await promptTime(chatId, session)
+      }
+    }
+    return
+  }
+
+  if (prefix === 'time') {
+    await answerCallback(cb.id)
+    if (value === 'custom') {
+      session.step = 'order_time_custom'
+      await sendMessage(chatId, tr(session, 'timeCustomAsk'))
+      return
+    }
+    session.arrivalIso = value === 'now' ? null : new Date(Date.now() + Number(value) * 60000).toISOString()
+    await showConfirm(chatId, session)
+    return
+  }
+
+  if (prefix === 'confirm') {
+    if (value === 'yes') {
+      await finalizeConfirm(chatId, session, cb.id)
+    } else {
+      await answerCallback(cb.id)
+      await sendMessage(chatId, tr(session, 'cancelled'))
+      await showMainMenu(chatId, session)
+    }
+    return
+  }
+
+  await answerCallback(cb.id)
 }
 
 async function handleUpdate(update) {
-  const msg = update.message
-  if (!msg || !msg.text) return
-  const chatId = msg.chat.id
-  const text = msg.text.trim()
   try {
-    if (text.startsWith('/start')) {
-      await callApi('sendMessage', {
-        chat_id: chatId,
-        text: 'Добро пожаловать в Rovena! /menu — меню, /tables — столы, /help — список команд.'
-      })
-    } else if (text.startsWith('/menu')) {
-      await callApi('sendMessage', { chat_id: chatId, text: formatMenuMessage(), parse_mode: 'HTML' })
-    } else if (text.startsWith('/tables')) {
-      await callApi('sendMessage', { chat_id: chatId, text: formatTablesMessage(), parse_mode: 'HTML' })
-    } else if (text.startsWith('/help')) {
-      await callApi('sendMessage', {
-        chat_id: chatId,
-        text: '/menu — посмотреть меню\n/tables — свободные столы\n/help — список команд'
-      })
-    }
+    if (update.callback_query) await handleCallback(update.callback_query)
+    else if (update.message) await handleMessage(update.message)
   } catch (e) {
     console.error('[rovena-bot] handleUpdate error', e)
   }
 }
+
+// ---------- Напоминания о брони (за N минут до прихода, см. Подключения → Бот) ----------
+
+async function checkReminders() {
+  try {
+    const venueId = defaultVenueId()
+    if (!venueId) return
+    const settings = repo.getBotSettings(venueId)
+    const minutes = settings?.reminder_minutes_before || 0
+    if (!minutes) return
+    const due = repo.findBookingsDueForReminder(minutes)
+    for (const booking of due) {
+      const customer = repo.getBotCustomer(booking.bot_chat_id)
+      const lang = customer?.language || 'ru'
+      await sendMessage(
+        booking.bot_chat_id,
+        t(lang, 'reminderMessage', { time: formatTimeLabel(booking.date_from), table: booking.table_name || '—' })
+      ).catch(() => {})
+      repo.markBookingReminderSent(booking.id)
+    }
+  } catch (e) {
+    console.error('[rovena-bot] reminder check failed', e)
+  }
+}
+
+// ---------- Уведомление гостя об изменении статуса заказа/брони (вызывается из ipcHandlers) ----------
+
+export async function notifyOrderStatus(order, status) {
+  if (!running || !order?.bot_chat_id) return
+  const customer = repo.getBotCustomer(order.bot_chat_id)
+  const lang = customer?.language || 'ru'
+  const key = status === 'done' ? 'statusUpdateDone' : status === 'cancelled' ? 'statusUpdateCancelled' : null
+  if (!key) return
+  await sendMessage(order.bot_chat_id, t(lang, key, { id: order.id })).catch((e) =>
+    console.error('[rovena-bot] notifyOrderStatus failed', e)
+  )
+}
+
+export async function notifyBookingStatus(booking, status) {
+  if (!running || !booking?.bot_chat_id) return
+  const customer = repo.getBotCustomer(booking.bot_chat_id)
+  const lang = customer?.language || 'ru'
+  const key = status === 'confirmed' ? 'bookingConfirmedNotice' : status === 'cancelled' ? 'bookingCancelledNotice' : null
+  if (!key) return
+  await sendMessage(booking.bot_chat_id, t(lang, key, { time: formatTimeLabel(booking.date_from) })).catch((e) =>
+    console.error('[rovena-bot] notifyBookingStatus failed', e)
+  )
+}
+
+// ---------- Управление ботом ----------
 
 async function pollLoop() {
   while (running) {
@@ -122,7 +791,9 @@ export async function startBot(token) {
   running = true
   offset = 0
   lastError = null
+  sessions.clear()
   pollLoop()
+  reminderInterval = setInterval(checkReminders, REMINDER_CHECK_MS)
   repo.updateConnection('rovena_bot', { enabled: 1, status: 'online' }, 'crm-admin')
   return getBotStatus()
 }
@@ -131,6 +802,8 @@ export function stopBot() {
   if (!running) return getBotStatus()
   running = false
   pollAbort?.abort()
+  if (reminderInterval) clearInterval(reminderInterval)
+  reminderInterval = null
   botUsername = null
   repo.updateConnection('rovena_bot', { enabled: 0, status: 'offline' }, 'crm-admin')
   return getBotStatus()

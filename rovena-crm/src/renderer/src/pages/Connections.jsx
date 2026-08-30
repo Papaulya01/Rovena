@@ -132,6 +132,7 @@ export default function Connections() {
   const [testPrintResult, setTestPrintResult] = useState(null)
   const [updater, setUpdater] = useState({ state: 'idle', currentVersion: '', info: null })
   const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [botSettings, setBotSettings] = useState(null)
 
   useEffect(() => {
     window.rovena.updater.status().then(setUpdater)
@@ -167,6 +168,7 @@ export default function Connections() {
     window.rovena.regionalSettings.get().then(setRegionalSettings)
     window.rovena.printerSettings.get().then(setPrinterSettings)
     window.rovena.printer.list().then(setPrinters).catch(() => setPrinters([]))
+    window.rovena.botSettings.get().then(setBotSettings)
   }
 
   useEffect(() => {
@@ -267,6 +269,20 @@ export default function Connections() {
     setPrinterSettings((prev) => ({ ...prev, [field]: value }))
     await window.rovena.printerSettings.update({ [field]: value })
     load()
+  }
+
+  async function saveBotSetting(field, value) {
+    setBotSettings((prev) => ({ ...prev, [field]: value }))
+    await window.rovena.botSettings.update({ [field]: value })
+    load()
+  }
+
+  async function handleQrChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => saveBotSetting('payment_qr', reader.result)
+    reader.readAsDataURL(file)
   }
 
   async function testPrint() {
@@ -459,6 +475,80 @@ export default function Connections() {
               </span>
             )}
           </div>
+
+          {botSettings && (
+            <div className="server-panel" style={{ marginTop: 16 }}>
+              <h4 style={{ marginTop: 0 }}>{t('connections.botSettingsTitle')}</h4>
+
+              <div style={{ marginBottom: 16 }}>
+                <label>{t('connections.botQrLabel')}</label>
+                <div className="photo-picker">
+                  {botSettings.payment_qr ? (
+                    <img src={botSettings.payment_qr} alt="" className="photo-preview" />
+                  ) : (
+                    <div className="photo-preview photo-preview-empty">{t('connections.noQr')}</div>
+                  )}
+                  <div className="photo-picker-actions">
+                    <label className="btn secondary photo-upload-btn">
+                      {t('menuPage.chooseFile')}
+                      <input type="file" accept="image/*" onChange={handleQrChange} />
+                    </label>
+                    {botSettings.payment_qr && (
+                      <button type="button" className="btn secondary" onClick={() => saveBotSetting('payment_qr', '')}>
+                        {t('connections.removeQr')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p style={{ color: 'var(--ink-soft)', fontSize: 11.5, marginTop: 6, marginBottom: 0 }}>
+                  {t('connections.botQrHint')}
+                </p>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label>{t('connections.notifyChatIdLabel')}</label>
+                <input
+                  value={botSettings.notify_chat_id || ''}
+                  onChange={(e) => saveBotSetting('notify_chat_id', e.target.value)}
+                  placeholder={t('connections.notifyChatIdPlaceholder')}
+                />
+                <p style={{ color: 'var(--ink-soft)', fontSize: 11.5, marginTop: 6, marginBottom: 0 }}>
+                  {t('connections.notifyChatIdHint')}
+                </p>
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 400, marginBottom: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={!!botSettings.notify_new_booking}
+                  onChange={(e) => saveBotSetting('notify_new_booking', e.target.checked ? 1 : 0)}
+                />
+                {t('connections.notifyNewBookingLabel')}
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 400, marginBottom: 14 }}>
+                <input
+                  type="checkbox"
+                  checked={!!botSettings.notify_new_order}
+                  onChange={(e) => saveBotSetting('notify_new_order', e.target.checked ? 1 : 0)}
+                />
+                {t('connections.notifyNewOrderLabel')}
+              </label>
+
+              <div>
+                <label>{t('connections.reminderMinutesLabel')}</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={botSettings.reminder_minutes_before}
+                  onChange={(e) => saveBotSetting('reminder_minutes_before', Number(e.target.value) || 0)}
+                  style={{ maxWidth: 140 }}
+                />
+                <p style={{ color: 'var(--ink-soft)', fontSize: 11.5, marginTop: 6, marginBottom: 0 }}>
+                  {t('connections.reminderMinutesHint')}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="instructions">
             <h4>{t('connections.botHowToTitle')}</h4>

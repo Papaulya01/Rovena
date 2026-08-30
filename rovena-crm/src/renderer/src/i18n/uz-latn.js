@@ -99,7 +99,8 @@ export default {
       confirmed: 'Tasdiqlangan',
       done: 'Tayyor',
       cancelled: 'Bekor qilingan'
-    }
+    },
+    bookingNoName: 'ismsiz'
   },
   common2: {
     id: 'ID',
@@ -480,7 +481,19 @@ export default {
     botHowTo3: "«Botni ishga tushirish»ni bosing — CRM Telegram'ga ulanadi va xabarlarga javob bera boshlaydi.",
     botHowTo4: "Telegram'da tekshiring: botga {start}, keyin {menu} deb yozing — «Menyu» bo'limidan taomlar ro'yxati keladi.",
     botFooterNote:
-      "Bot orqali to'g'ridan-to'g'ri buyurtma va bron qabul qilish — keyingi qadam (qaror bog'liq: oddiy bot yoki Mini App, ТЗ dagi ochiq savollarga qarang). Hozircha bot buyruqlarga javob beradi va menyuni ko'rsatadi.",
+      "Bot to'liq ro'yxatdan o'tish, buyurtmalar (zalda va yetkazib berish bilan) va stolni kerakli vaqtga bron qilishni CRM katalogidagi savat bilan qabul qila oladi. Hozircha to'lov faqat joyida naqd — QR orqali onlayn to'lov keyinroq qo'shiladi.",
+    botSettingsTitle: 'Bot sozlamalari',
+    botQrLabel: "To'lov uchun QR-kod (hozircha qabul qilinmaydi, faqat mehmonga ko'rsatiladi)",
+    botQrHint: "Onlayn to'lov paydo bo'lganda, mehmon buyurtmani tasdiqlashda shu QR'ni ko'radi.",
+    noQr: "QR yuklanmagan",
+    removeQr: "QR'ni o'chirish",
+    notifyChatIdLabel: 'Yangi buyurtma va bronlar haqida xabarnoma uchun Chat ID',
+    notifyChatIdPlaceholder: 'masalan, 123456789',
+    notifyChatIdHint: "Chat_id'ingizni bilish uchun — botga /id buyrug'ini yozing, u javobida raqamni yuboradi.",
+    notifyNewBookingLabel: 'Yangi bronlar haqida xabar berish',
+    notifyNewOrderLabel: 'Yangi buyurtmalar haqida xabar berish',
+    reminderMinutesLabel: 'Mehmonga bron haqida necha daqiqa oldin eslatish',
+    reminderMinutesHint: "0 — eslatmaslik",
     timezone: 'Vaqt zonasi',
     timeFormat: 'Vaqt formati',
     format24: '24 soatlik (14:30)',

@@ -271,6 +271,12 @@ export default function CashierPanel({ session, onLogout }) {
                   {tb.capacity} {t('cashier.peopleShort')}
                   {tb.zone ? ` · ${tb.zone}` : ''}
                 </div>
+                {(tb.current || tb.next) && (
+                  <div className="table-card-booking">
+                    {(tb.current || tb.next).client_name || t('cashier.bookingNoName')} ·{' '}
+                    {formatDateTime((tb.current || tb.next).date_from)}
+                  </div>
+                )}
               </div>
             ))}
           </div>

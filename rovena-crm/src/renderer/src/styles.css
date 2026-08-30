@@ -655,6 +655,16 @@ input[type='radio']:disabled {
   margin-top: 2px;
 }
 
+.table-card-booking {
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 4px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .table-card-status {
   display: inline-block;
   margin-top: 8px;

@@ -1,0 +1,280 @@
+/**
+ * Тексты Rovena-Bot на 3 языках. Отдельно от src/renderer/src/i18n — это
+ * серверная часть (главный процесс Electron, у бота нет доступа к рендереру),
+ * тот же принцип: t(lang, key, vars) с автоматическим откатом на русский.
+ */
+
+const ru = {
+  langPrompt: 'Добро пожаловать в Rovena! 👋\nВыберите язык / Tilni tanlang / Тилни танланг:',
+  langSet: 'Язык установлен: Русский 🇷🇺',
+  instructions:
+    'Это бот заведения Rovena. Кнопки внизу экрана — быстрые действия:\n' +
+    '📝 Регистрация — оставить имя и телефон, чтобы не вводить их каждый раз\n' +
+    '🍽 Сделать заказ — в зале или с доставкой\n' +
+    '📅 Забронировать стол — на нужное время\n' +
+    '🪑 Столы — какие столы сейчас свободны\n' +
+    '📋 Меню — посмотреть блюда и цены\n' +
+    '🌐 Язык — сменить язык в любой момент\n\n' +
+    'Оплата пока принимается только наличными на месте — оплата по QR скоро появится.',
+  btnRegister: '📝 Регистрация',
+  btnOrder: '🍽 Сделать заказ',
+  btnBook: '📅 Забронировать стол',
+  btnTables: '🪑 Столы',
+  btnMenu: '📋 Меню',
+  btnLang: '🌐 Язык',
+  btnHelp: 'ℹ️ Помощь',
+  btnBack: '⬅ Назад',
+  btnCancel: '✖ Отмена',
+  btnDone: '✅ Готово',
+  regAskName: 'Как вас зовут? Напишите имя и фамилию.',
+  regAskPhone:
+    'Спасибо, {name}! Теперь номер телефона — нажмите кнопку ниже, чтобы поделиться контактом, или введите вручную.',
+  btnShareContact: '📱 Поделиться контактом',
+  regDone: 'Регистрация завершена ✅\n{name}, {phone}\nТеперь оформлять заказы и брони будет быстрее.',
+  regAlready: 'Вы уже зарегистрированы: {name}, {phone}. Хотите обновить данные?',
+  btnUpdateReg: 'Обновить данные',
+  noTables: 'Столы пока не заведены — загляните позже.',
+  tablesList: 'Столы в зале сейчас:',
+  tableFree: '🟢 свободен',
+  tableReserved: '🟡 забронирован',
+  tableOccupied: '🔴 занят',
+  noMenu: 'Меню пока не заполнено — загляните позже.',
+  menuTitle: 'Меню — выберите категорию:',
+  orderTypePrompt: 'Как оформить заказ?',
+  btnDineIn: '🍽 В зале, за столом',
+  btnDelivery: '🚗 Доставка',
+  chooseTable: 'Выберите стол:',
+  askDeliveryAddress: 'Укажите адрес доставки одним сообщением (улица, дом, квартира, ориентир).',
+  categoryPrompt: 'Категория «{category}» — нажмите на блюдо, чтобы добавить его в заказ:',
+  cartEmpty: 'Корзина пока пуста — выберите блюда из меню выше.',
+  cartSummary: 'Ваш заказ:\n{lines}\nИтого: {total}',
+  cartAdded: '{name} добавлен(о) — {qty} шт.',
+  btnCartDone: '✅ Готово ({count})',
+  btnCategories: '⬅ Категории',
+  emptyCartError: 'Корзина пуста — добавьте хотя бы одно блюдо.',
+  timePrompt: 'Когда вы придёте / когда доставить заказ?',
+  btnTimeNow: '🕐 Сейчас / как можно скорее',
+  btnTimeIn30: 'Через 30 минут',
+  btnTimeIn60: 'Через 1 час',
+  btnTimeIn120: 'Через 2 часа',
+  btnTimeCustom: 'Указать время вручную',
+  timeCustomAsk: 'Введите время в формате ЧЧ:ММ (например, 19:30) — на сегодня.',
+  timeCustomBad: 'Не получилось распознать время. Формат: ЧЧ:ММ, например 19:30.',
+  bookOnlyOrOrderPrompt: 'Забронировать стол — сразу оформим и заказ, или пока просто бронь без заказа?',
+  btnBookWithOrder: 'Бронь + заказ',
+  btnBookOnly: 'Только бронь',
+  guestsPrompt: 'На сколько человек?',
+  orderConfirmTitle: 'Проверьте заказ перед подтверждением:',
+  orderConfirmTable: 'Стол: {table}',
+  orderConfirmDelivery: 'Доставка: {address}',
+  orderConfirmTime: 'Время: {time}',
+  orderConfirmTimeNow: 'как можно скорее',
+  orderConfirmPayment: 'Оплата: наличными на месте',
+  orderConfirmPaymentQr: 'Оплата: наличными на месте (в будущем — по QR, см. ниже)',
+  btnConfirm: '✅ Подтвердить',
+  bookingConfirmTitle: 'Проверьте бронь перед подтверждением:',
+  orderCreated: 'Заказ №{id} принят! ✅\nМы свяжемся, если что-то будет уточнить. Спасибо, что выбрали нас!',
+  bookingCreated: 'Стол забронирован ✅ Ждём вас {time}!',
+  bookingWithOrderCreated: 'Бронь и заказ №{id} оформлены ✅ Ждём вас {time}!',
+  cancelled: 'Отменено. Возвращаемся в главное меню.',
+  backToMenu: 'Главное меню — выберите действие:',
+  unknownCommand: 'Не совсем понял 🙂 Используйте кнопки внизу экрана.',
+  needRegistrationHint: 'Подсказка: если пройдёте «Регистрацию», данные не нужно будет вводить заново.',
+  reminderMessage: 'Напоминаем: сегодня в {time} у вас забронирован стол «{table}». Ждём вас!',
+  staffNewBooking: '🔔 Новая бронь из бота: {table}, {time}, {name} ({contact})',
+  staffNewOrder: '🔔 Новый заказ из бота №{id} на {total} — {name} ({contact})',
+  idCommand: 'Ваш chat_id: {chatId}\nВставьте его в CRM → Подключения → Бот → «Chat ID для уведомлений», чтобы получать уведомления сюда.',
+  statusUpdateDone: 'Ваш заказ №{id} готов ✅',
+  statusUpdateCancelled: 'Ваш заказ №{id} отменён.',
+  bookingConfirmedNotice: 'Ваша бронь на {time} подтверждена ✅',
+  bookingCancelledNotice: 'Ваша бронь на {time} отменена.'
+}
+
+const uzLatn = {
+  langPrompt: "Rovena botiga xush kelibsiz! 👋\nВыберите язык / Tilni tanlang / Тилни танланг:",
+  langSet: "Til tanlandi: O'zbekcha (lotin)",
+  instructions:
+    "Bu Rovena muassasasining boti. Pastdagi tugmalar — tezkor amallar:\n" +
+    "📝 Ro'yxatdan o'tish — ism va telefon qoldiring, har safar qayta kiritmaslik uchun\n" +
+    "🍽 Buyurtma berish — zalda yoki yetkazib berish bilan\n" +
+    "📅 Stol band qilish — kerakli vaqtga\n" +
+    "🪑 Stollar — hozir qaysi stollar bo'sh\n" +
+    "📋 Menyu — taomlar va narxlarni ko'rish\n" +
+    "🌐 Til — istalgan vaqtda tilni o'zgartirish\n\n" +
+    "Hozircha to'lov faqat naqd qabul qilinadi — QR orqali to'lov tez orada qo'shiladi.",
+  btnRegister: "📝 Ro'yxatdan o'tish",
+  btnOrder: '🍽 Buyurtma berish',
+  btnBook: '📅 Stol band qilish',
+  btnTables: '🪑 Stollar',
+  btnMenu: '📋 Menyu',
+  btnLang: '🌐 Til',
+  btnHelp: 'ℹ️ Yordam',
+  btnBack: '⬅ Orqaga',
+  btnCancel: '✖ Bekor qilish',
+  btnDone: '✅ Tayyor',
+  regAskName: 'Ismingiz nima? Ism va familiyangizni yozing.',
+  regAskPhone:
+    "Rahmat, {name}! Endi telefon raqami — pastdagi tugma orqali kontaktni ulashing yoki qo'lda kiriting.",
+  btnShareContact: '📱 Kontaktni ulashish',
+  regDone: "Ro'yxatdan o'tish yakunlandi ✅\n{name}, {phone}\nEndi buyurtma va bron qilish tezroq bo'ladi.",
+  regAlready: "Siz allaqachon ro'yxatdan o'tgansiz: {name}, {phone}. Ma'lumotlarni yangilaysizmi?",
+  btnUpdateReg: "Ma'lumotlarni yangilash",
+  noTables: "Stollar hali kiritilmagan — keyinroq qayta urinib ko'ring.",
+  tablesList: 'Hozir zaldagi stollar:',
+  tableFree: "🟢 bo'sh",
+  tableReserved: '🟡 band qilingan',
+  tableOccupied: '🔴 band',
+  noMenu: "Menyu hali to'ldirilmagan — keyinroq qayta urinib ko'ring.",
+  menuTitle: 'Menyu — turkumni tanlang:',
+  orderTypePrompt: 'Buyurtmani qanday rasmiylashtiramiz?',
+  btnDineIn: '🍽 Zalda, stolda',
+  btnDelivery: '🚗 Yetkazib berish',
+  chooseTable: 'Stolni tanlang:',
+  askDeliveryAddress: "Yetkazib berish manzilini bitta xabarda yozing (ko'cha, uy, xonadon, mo'ljal).",
+  categoryPrompt: "«{category}» turkumi — taomni tanlang, buyurtmaga qo'shish uchun:",
+  cartEmpty: "Savat hali bo'sh — yuqoridagi menyudan taom tanlang.",
+  cartSummary: 'Sizning buyurtmangiz:\n{lines}\nJami: {total}',
+  cartAdded: "{name} qo'shildi — {qty} dona.",
+  btnCartDone: '✅ Tayyor ({count})',
+  btnCategories: '⬅ Turkumlar',
+  emptyCartError: "Savat bo'sh — kamida bitta taom qo'shing.",
+  timePrompt: 'Qachon kelasiz / buyurtmani qachon yetkazib berish kerak?',
+  btnTimeNow: '🕐 Hozir / imkon qadar tezroq',
+  btnTimeIn30: '30 daqiqadan keyin',
+  btnTimeIn60: '1 soatdan keyin',
+  btnTimeIn120: '2 soatdan keyin',
+  btnTimeCustom: "Vaqtni qo'lda kiritish",
+  timeCustomAsk: "Vaqtni SS:DD formatida kiriting (masalan, 19:30) — bugunga.",
+  timeCustomBad: "Vaqtni tushunib bo'lmadi. Format: SS:DD, masalan 19:30.",
+  bookOnlyOrOrderPrompt: 'Stol band qilamiz — darhol buyurtma ham beramizmi, yoki hozircha faqat bron?',
+  btnBookWithOrder: 'Bron + buyurtma',
+  btnBookOnly: 'Faqat bron',
+  guestsPrompt: 'Necha kishi uchun?',
+  orderConfirmTitle: 'Tasdiqlashdan oldin buyurtmani tekshiring:',
+  orderConfirmTable: 'Stol: {table}',
+  orderConfirmDelivery: 'Yetkazib berish: {address}',
+  orderConfirmTime: 'Vaqt: {time}',
+  orderConfirmTimeNow: 'imkon qadar tezroq',
+  orderConfirmPayment: "To'lov: joyida naqd pul bilan",
+  orderConfirmPaymentQr: "To'lov: joyida naqd pul bilan (kelajakda — QR orqali, pastga qarang)",
+  btnConfirm: '✅ Tasdiqlash',
+  bookingConfirmTitle: 'Tasdiqlashdan oldin bronni tekshiring:',
+  orderCreated: "Buyurtma №{id} qabul qilindi! ✅\nAgar aniqlashtirish kerak bo'lsa, bog'lanamiz. Bizni tanlaganingiz uchun rahmat!",
+  bookingCreated: 'Stol band qilindi ✅ Sizni {time} kutamiz!',
+  bookingWithOrderCreated: 'Bron va buyurtma №{id} rasmiylashtirildi ✅ Sizni {time} kutamiz!',
+  cancelled: 'Bekor qilindi. Asosiy menyuga qaytamiz.',
+  backToMenu: 'Asosiy menyu — amalni tanlang:',
+  unknownCommand: "Tushunmadim 🙂 Pastdagi tugmalardan foydalaning.",
+  needRegistrationHint: "Maslahat: agar «Ro'yxatdan o'tish»ni bajarsangiz, ma'lumotlarni qayta kiritish shart bo'lmaydi.",
+  reminderMessage: 'Eslatma: bugun soat {time} da «{table}» stoli band qilingan. Sizni kutamiz!',
+  staffNewBooking: "🔔 Botdan yangi bron: {table}, {time}, {name} ({contact})",
+  staffNewOrder: '🔔 Botdan yangi buyurtma №{id}, summasi {total} — {name} ({contact})',
+  idCommand: 'Sizning chat_id: {chatId}\nUni CRM → Ulanishlar → Bot → «Xabarnomalar uchun Chat ID» maydoniga kiriting.',
+  statusUpdateDone: 'Buyurtmangiz №{id} tayyor ✅',
+  statusUpdateCancelled: 'Buyurtmangiz №{id} bekor qilindi.',
+  bookingConfirmedNotice: '{time} dagi broningiz tasdiqlandi ✅',
+  bookingCancelledNotice: '{time} dagi broningiz bekor qilindi.'
+}
+
+const uzCyrl = {
+  langPrompt: 'Ровена ботига хуш келибсиз! 👋\nВыберите язык / Tilni tanlang / Тилни танланг:',
+  langSet: 'Тил танланди: Ўзбекча (кирилл)',
+  instructions:
+    'Бу Ровена муассасасининг боти. Пастдаги тугмалар — тезкор амаллар:\n' +
+    '📝 Рўйхатдан ўтиш — исм ва телефон қолдиринг, ҳар сафар қайта киритмаслик учун\n' +
+    '🍽 Буюртма бериш — залда ёки етказиб бериш билан\n' +
+    '📅 Стол банд қилиш — керакли вақтга\n' +
+    '🪑 Столлар — ҳозир қайси столлар бўш\n' +
+    '📋 Меню — таомлар ва нархларни кўриш\n' +
+    '🌐 Тил — исталган вақтда тилни ўзгартириш\n\n' +
+    "Ҳозирча тўлов фақат нақд қабул қилинади — QR орқали тўлов тез орада қўшилади.",
+  btnRegister: '📝 Рўйхатдан ўтиш',
+  btnOrder: '🍽 Буюртма бериш',
+  btnBook: '📅 Стол банд қилиш',
+  btnTables: '🪑 Столлар',
+  btnMenu: '📋 Меню',
+  btnLang: '🌐 Тил',
+  btnHelp: 'ℹ️ Ёрдам',
+  btnBack: '⬅ Орқага',
+  btnCancel: '✖ Бекор қилиш',
+  btnDone: '✅ Тайёр',
+  regAskName: 'Исмингиз нима? Исм ва фамилиянгизни ёзинг.',
+  regAskPhone:
+    'Раҳмат, {name}! Энди телефон рақами — пастдаги тугма орқали контактни улашинг ёки қўлда киритинг.',
+  btnShareContact: '📱 Контактни улашиш',
+  regDone: 'Рўйхатдан ўтиш якунланди ✅\n{name}, {phone}\nЭнди буюртма ва брон қилиш тезроқ бўлади.',
+  regAlready: "Сиз аллақачон рўйхатдан ўтгансиз: {name}, {phone}. Маълумотларни янгилайсизми?",
+  btnUpdateReg: 'Маълумотларни янгилаш',
+  noTables: 'Столлар ҳали киритилмаган — кейинроқ қайта уриниб кўринг.',
+  tablesList: 'Ҳозир залдаги столлар:',
+  tableFree: '🟢 бўш',
+  tableReserved: '🟡 банд қилинган',
+  tableOccupied: '🔴 банд',
+  noMenu: 'Меню ҳали тўлдирилмаган — кейинроқ қайта уриниб кўринг.',
+  menuTitle: 'Меню — туркумни танланг:',
+  orderTypePrompt: 'Буюртмани қандай расмийлаштирамиз?',
+  btnDineIn: '🍽 Залда, столда',
+  btnDelivery: '🚗 Етказиб бериш',
+  chooseTable: 'Столни танланг:',
+  askDeliveryAddress: 'Етказиб бериш манзилини битта хабарда ёзинг (кўча, уй, хонадон, мўлжал).',
+  categoryPrompt: '«{category}» туркуми — таомни танланг, буюртмага қўшиш учун:',
+  cartEmpty: 'Сават ҳали бўш — юқоридаги менюдан таом танланг.',
+  cartSummary: 'Сизнинг буюртмангиз:\n{lines}\nЖами: {total}',
+  cartAdded: '{name} қўшилди — {qty} дона.',
+  btnCartDone: '✅ Тайёр ({count})',
+  btnCategories: '⬅ Туркумлар',
+  emptyCartError: 'Сават бўш — камида битта таом қўшинг.',
+  timePrompt: 'Қачон келасиз / буюртмани қачон етказиб бериш керак?',
+  btnTimeNow: '🕐 Ҳозир / имкон қадар тезроқ',
+  btnTimeIn30: '30 дақиқадан кейин',
+  btnTimeIn60: '1 соатдан кейин',
+  btnTimeIn120: '2 соатдан кейин',
+  btnTimeCustom: 'Вақтни қўлда киритиш',
+  timeCustomAsk: 'Вақтни СС:ДД форматида киритинг (масалан, 19:30) — бугунга.',
+  timeCustomBad: 'Вақтни тушуниб бўлмади. Формат: СС:ДД, масалан 19:30.',
+  bookOnlyOrOrderPrompt: 'Стол банд қиламиз — дарҳол буюртма ҳам берамизми, ёки ҳозирча фақат брон?',
+  btnBookWithOrder: 'Брон + буюртма',
+  btnBookOnly: 'Фақат брон',
+  guestsPrompt: 'Неча киши учун?',
+  orderConfirmTitle: 'Тасдиқлашдан олдин буюртмани текширинг:',
+  orderConfirmTable: 'Стол: {table}',
+  orderConfirmDelivery: 'Етказиб бериш: {address}',
+  orderConfirmTime: 'Вақт: {time}',
+  orderConfirmTimeNow: 'имкон қадар тезроқ',
+  orderConfirmPayment: 'Тўлов: жойида нақд пул билан',
+  orderConfirmPaymentQr: 'Тўлов: жойида нақд пул билан (келажакда — QR орқали, пастга қаранг)',
+  btnConfirm: '✅ Тасдиқлаш',
+  bookingConfirmTitle: 'Тасдиқлашдан олдин бронни текширинг:',
+  orderCreated: "Буюртма №{id} қабул қилинди! ✅\nАгар аниқлаштириш керак бўлса, боғланамиз. Бизни танлаганингиз учун раҳмат!",
+  bookingCreated: 'Стол банд қилинди ✅ Сизни {time} кутамиз!',
+  bookingWithOrderCreated: 'Брон ва буюртма №{id} расмийлаштирилди ✅ Сизни {time} кутамиз!',
+  cancelled: 'Бекор қилинди. Асосий менюга қайтамиз.',
+  backToMenu: 'Асосий меню — амални танланг:',
+  unknownCommand: 'Тушунмадим 🙂 Пастдаги тугмалардан фойдаланинг.',
+  needRegistrationHint: 'Маслаҳат: агар «Рўйхатдан ўтиш»ни бажарсангиз, маълумотларни қайта киритиш шарт бўлмайди.',
+  reminderMessage: 'Эслатма: бугун соат {time} да «{table}» столи банд қилинган. Сизни кутамиз!',
+  staffNewBooking: '🔔 Ботдан янги брон: {table}, {time}, {name} ({contact})',
+  staffNewOrder: '🔔 Ботдан янги буюртма №{id}, суммаси {total} — {name} ({contact})',
+  idCommand: 'Сизнинг chat_id: {chatId}\nУни CRM → Уланишлар → Бот → «Хабарномалар учун Chat ID» майдонига киритинг.',
+  statusUpdateDone: 'Буюртмангиз №{id} тайёр ✅',
+  statusUpdateCancelled: 'Буюртмангиз №{id} бекор қилинди.',
+  bookingConfirmedNotice: '{time} даги бронингиз тасдиқланди ✅',
+  bookingCancelledNotice: '{time} даги бронингиз бекор қилинди.'
+}
+
+const DICTS = { ru, 'uz-latn': uzLatn, 'uz-cyrl': uzCyrl }
+
+export function t(lang, key, vars) {
+  const dict = DICTS[lang] || ru
+  let str = dict[key] ?? ru[key] ?? key
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) {
+      str = str.replaceAll(`{${k}}`, v)
+    }
+  }
+  return str
+}
+
+export function supportedLanguages() {
+  return ['ru', 'uz-latn', 'uz-cyrl']
+}

@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs'
 import * as repo from './repo.js'
 import * as auth from './auth.js'
 import { startServer, stopServer, getServerStatus, generateApiKey } from './server.js'
-import { startBot, stopBot, getBotStatus } from './bot.js'
+import { startBot, stopBot, getBotStatus, notifyOrderStatus, notifyBookingStatus } from './bot.js'
 import { getUpdaterStatus, checkForUpdates, downloadUpdate, quitAndInstall } from './updater.js'
 
 function currentVenueId() {
@@ -169,7 +169,13 @@ export function registerIpcHandlers() {
   // Брони создаются только из Staff/Bot (через repo.js напрямую — см. server.js/bot.js).
   // CRM — только контроль: список + смена статуса, канала создания намеренно нет.
   ipcMain.handle('bookings:list', () => repo.listBookings(currentVenueId()))
-  ipcMain.handle('bookings:update', (_e, { id, ...payload }) => repo.updateBooking(id, payload, currentAuthor()))
+  ipcMain.handle('bookings:update', (_e, { id, ...payload }) => {
+    const booking = repo.updateBooking(id, payload, currentAuthor())
+    if (payload.status === 'confirmed' || payload.status === 'cancelled') {
+      notifyBookingStatus(booking, payload.status).catch(() => {})
+    }
+    return booking
+  })
 
   // ---------- Tables (зал) ----------
   ipcMain.handle('tables:list', () => repo.listTables(currentVenueId()))
@@ -195,7 +201,13 @@ export function registerIpcHandlers() {
   // ---------- Orders ----------
   // Заказы создаются только из Staff/Bot — CRM их только видит и меняет статус.
   ipcMain.handle('orders:list', () => repo.listOrders(currentVenueId()))
-  ipcMain.handle('orders:update', (_e, { id, ...payload }) => repo.updateOrder(id, payload, currentAuthor()))
+  ipcMain.handle('orders:update', (_e, { id, ...payload }) => {
+    const order = repo.updateOrder(id, payload, currentAuthor())
+    if (payload.status === 'done' || payload.status === 'cancelled') {
+      notifyOrderStatus(order, payload.status).catch(() => {})
+    }
+    return order
+  })
 
   // ---------- Finance — admin и accountant (у кассира/склада своя зона) ----------
   ipcMain.handle('finance:list', () => {
@@ -261,6 +273,13 @@ export function registerIpcHandlers() {
     } finally {
       if (!printWin.isDestroyed()) printWin.close()
     }
+  })
+
+  // ---------- Настройки Rovena-Bot (QR для оплаты, уведомления, напоминания) ----------
+  ipcMain.handle('botSettings:get', () => repo.getBotSettings(currentVenueId()))
+  ipcMain.handle('botSettings:update', (_e, payload) => {
+    requireRole('admin')
+    return repo.updateBotSettings(currentVenueId(), payload)
   })
 
   // ---------- Экспорт отчёта в файл (CSV/Excel) через нативный диалог "Сохранить как" ----------

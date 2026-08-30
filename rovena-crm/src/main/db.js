@@ -247,6 +247,31 @@ CREATE TABLE IF NOT EXISTS printer_settings (
   silent_print INTEGER NOT NULL DEFAULT 0        -- печатать без диалога подтверждения ОС
 );
 
+-- Клиенты бота (Telegram), отдельно от users/employees — это гости, а не персонал.
+-- Регистрация в боте запоминает язык/телефон/имя, чтобы не спрашивать их заново
+-- при каждом обращении. Бот пока общий на все заведения, поэтому без venue_id.
+CREATE TABLE IF NOT EXISTS bot_customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id TEXT NOT NULL UNIQUE,
+  full_name TEXT,
+  phone TEXT,
+  language TEXT NOT NULL DEFAULT 'ru', -- ru | uz-latn | uz-cyrl
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Настройки Rovena-Bot, которые задаёт админ в CRM (Подключения → Бот):
+-- QR для будущей онлайн-оплаты (пока не принимается, только показывается —
+-- реальный эквайринг это отдельная задача), кому в Telegram слать уведомления
+-- о новых бронях/заказах, и за сколько минут напоминать гостю о брони.
+CREATE TABLE IF NOT EXISTS bot_settings (
+  venue_id INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
+  payment_qr TEXT,
+  notify_chat_id TEXT,
+  notify_new_booking INTEGER NOT NULL DEFAULT 1,
+  notify_new_order INTEGER NOT NULL DEFAULT 1,
+  reminder_minutes_before INTEGER NOT NULL DEFAULT 60
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   entity TEXT NOT NULL,             -- order | booking | finance_entry | connection
@@ -286,6 +311,15 @@ function migrate() {
   ensureColumn('tax_settings', 'logo', 'TEXT')
   ensureColumn('categories', 'is_general', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn('regional_settings', 'time_offset_ms', 'INTEGER NOT NULL DEFAULT 0')
+
+  // Заказы/брони через Rovena-Bot (30.08.2026): способ оплаты (пока только
+  // наличные, задел под QR/онлайн-оплату), адрес доставки, и chat_id гостя в
+  // Telegram — чтобы можно было прислать ему уведомление об изменении статуса.
+  ensureColumn('orders', 'payment_method', "TEXT NOT NULL DEFAULT 'cash'")
+  ensureColumn('orders', 'delivery_address', 'TEXT')
+  ensureColumn('orders', 'bot_chat_id', 'TEXT')
+  ensureColumn('bookings', 'bot_chat_id', 'TEXT')
+  ensureColumn('bookings', 'reminder_sent', 'INTEGER NOT NULL DEFAULT 0')
 
   // Мультиточечность добавлена 27.08.2026 поверх уже работавшей однoточечной
   // модели: гарантируем хотя бы одно заведение и переносим на него все записи,

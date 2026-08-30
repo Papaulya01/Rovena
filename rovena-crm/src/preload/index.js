@@ -100,6 +100,10 @@ const api = {
     list: () => ipcRenderer.invoke('printer:list'),
     print: (payload) => ipcRenderer.invoke('printer:print', payload)
   },
+  botSettings: {
+    get: () => ipcRenderer.invoke('botSettings:get'),
+    update: (payload) => ipcRenderer.invoke('botSettings:update', payload)
+  },
   exportFile: {
     save: (payload) => ipcRenderer.invoke('export:saveFile', payload)
   },

@@ -153,6 +153,33 @@ export function listBookings(venueId) {
     .all(venueId)
 }
 
+/**
+ * Брони от бота (bot_chat_id заполнен), время которых уже попало в окно
+ * напоминания, но напоминание ещё не отправлялось — для периодической
+ * проверки в bot.js. Сравнение дат в JS по той же причине, что и в tableStatuses.
+ */
+export function findBookingsDueForReminder(minutesBefore) {
+  const db = getDb()
+  const rows = db
+    .prepare(
+      `SELECT b.*, t.name as table_name
+       FROM bookings b LEFT JOIN tables t ON t.id = b.table_id
+       WHERE b.bot_chat_id IS NOT NULL AND b.reminder_sent = 0 AND b.status IN ('new', 'confirmed')`
+    )
+    .all()
+  const now = Date.now()
+  return rows.filter((b) => {
+    const from = new Date(b.date_from).getTime()
+    if (Number.isNaN(from)) return false
+    const minutesLeft = (from - now) / 60000
+    return minutesLeft > 0 && minutesLeft <= minutesBefore
+  })
+}
+
+export function markBookingReminderSent(id) {
+  getDb().prepare(`UPDATE bookings SET reminder_sent = 1 WHERE id = ?`).run(id)
+}
+
 // ---------- Tables (зал) ----------
 
 export function listTables(venueId, { activeOnly = false } = {}) {
@@ -240,8 +267,8 @@ export function tableStatuses(venueId) {
 export function createBooking(venueId, payload, author) {
   const db = getDb()
   const stmt = db.prepare(`
-    INSERT INTO bookings (venue_id, source, client_name, client_contact, table_id, purpose, date_from, date_to, status, comment)
-    VALUES (@venue_id, @source, @client_name, @client_contact, @table_id, @purpose, @date_from, @date_to, @status, @comment)
+    INSERT INTO bookings (venue_id, source, client_name, client_contact, table_id, purpose, date_from, date_to, status, comment, bot_chat_id)
+    VALUES (@venue_id, @source, @client_name, @client_contact, @table_id, @purpose, @date_from, @date_to, @status, @comment, @bot_chat_id)
   `)
   const info = stmt.run({
     venue_id: venueId,
@@ -253,6 +280,7 @@ export function createBooking(venueId, payload, author) {
     client_name: null,
     client_contact: null,
     table_id: null,
+    bot_chat_id: null,
     ...payload
   })
   logAudit('booking', info.lastInsertRowid, 'create', author, payload)
@@ -420,8 +448,8 @@ export function createOrder(venueId, payload, author) {
   const db = getDb()
   const { items = [], ...orderData } = payload
   const insertOrder = db.prepare(`
-    INSERT INTO orders (venue_id, shift_id, source, delivery, client_name, client_contact, status, total_amount, comment, booking_id, table_id)
-    VALUES (@venue_id, @shift_id, @source, @delivery, @client_name, @client_contact, @status, @total_amount, @comment, @booking_id, @table_id)
+    INSERT INTO orders (venue_id, shift_id, source, delivery, client_name, client_contact, status, total_amount, comment, booking_id, table_id, payment_method, delivery_address, bot_chat_id)
+    VALUES (@venue_id, @shift_id, @source, @delivery, @client_name, @client_contact, @status, @total_amount, @comment, @booking_id, @table_id, @payment_method, @delivery_address, @bot_chat_id)
   `)
   const insertItem = db.prepare(`
     INSERT INTO order_items (order_id, menu_item_id, name, qty, price) VALUES (?, ?, ?, ?, ?)
@@ -444,6 +472,9 @@ export function createOrder(venueId, payload, author) {
       table_id: null,
       client_name: null,
       client_contact: null,
+      payment_method: 'cash',
+      delivery_address: null,
+      bot_chat_id: null,
       ...orderData
     })
     const orderId = info.lastInsertRowid
@@ -680,6 +711,56 @@ export function updatePrinterSettings(venueId, payload) {
     ...payload
   })
   return getPrinterSettings(venueId)
+}
+
+// ---------- Настройки Rovena-Bot (QR для будущей онлайн-оплаты, уведомления, напоминания) ----------
+
+export function getBotSettings(venueId) {
+  const db = getDb()
+  let row = db.prepare(`SELECT * FROM bot_settings WHERE venue_id = ?`).get(venueId)
+  if (!row) {
+    db.prepare(`INSERT INTO bot_settings (venue_id) VALUES (?)`).run(venueId)
+    row = db.prepare(`SELECT * FROM bot_settings WHERE venue_id = ?`).get(venueId)
+  }
+  return row
+}
+
+export function updateBotSettings(venueId, payload) {
+  getBotSettings(venueId)
+  const db = getDb()
+  const fields = Object.keys(payload)
+  if (fields.length === 0) return getBotSettings(venueId)
+  const setClause = fields.map((f) => `${f} = @${f}`).join(', ')
+  db.prepare(`UPDATE bot_settings SET ${setClause} WHERE venue_id = @venue_id`).run({
+    venue_id: venueId,
+    ...payload
+  })
+  return getBotSettings(venueId)
+}
+
+// ---------- Клиенты бота (гости Telegram — регистрация языка/имени/телефона) ----------
+
+export function getBotCustomer(chatId) {
+  return getDb().prepare(`SELECT * FROM bot_customers WHERE chat_id = ?`).get(String(chatId))
+}
+
+export function upsertBotCustomer(chatId, payload) {
+  const db = getDb()
+  const existing = getBotCustomer(chatId)
+  if (existing) {
+    const fields = Object.keys(payload)
+    if (fields.length === 0) return existing
+    const setClause = fields.map((f) => `${f} = @${f}`).join(', ')
+    db.prepare(`UPDATE bot_customers SET ${setClause} WHERE chat_id = @chat_id`).run({
+      chat_id: String(chatId),
+      ...payload
+    })
+  } else {
+    db.prepare(
+      `INSERT INTO bot_customers (chat_id, full_name, phone, language) VALUES (@chat_id, @full_name, @phone, @language)`
+    ).run({ chat_id: String(chatId), full_name: null, phone: null, language: 'ru', ...payload })
+  }
+  return getBotCustomer(chatId)
 }
 
 // ---------- Connections (Radmin API / Bot — не привязаны к заведению; Staff-ключ теперь у venues) ----------
