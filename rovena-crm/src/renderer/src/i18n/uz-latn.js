@@ -496,7 +496,8 @@ export default {
     removeQr: "QR'ni o'chirish",
     notifyChatIdLabel: 'Yangi buyurtma va bronlar haqida xabarnoma uchun Chat ID',
     notifyChatIdPlaceholder: 'masalan, 123456789',
-    notifyChatIdHint: "Chat_id'ingizni bilish uchun — botga /id buyrug'ini yozing, u javobida raqamni yuboradi.",
+    notifyChatIdHint:
+      "Shaxsiy chat yoki xodimlar guruh chatini ko'rsatishingiz mumkin — shunda xabarnomani guruhdagi hamma ko'radi, faqat bitta kishi emas. Chat_id'ni bilish uchun: botni kerakli chatga (shaxsiy yoki guruh) qo'shing va u yerda /id buyrug'ini yozing — javobida raqam keladi (guruhlarda u manfiy bo'ladi).",
     notifyNewBookingLabel: 'Yangi bronlar haqida xabar berish',
     notifyNewOrderLabel: 'Yangi buyurtmalar haqida xabar berish',
     reminderMinutesLabel: 'Mehmonga bron haqida necha daqiqa oldin eslatish',
