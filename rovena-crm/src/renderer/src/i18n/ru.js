@@ -204,6 +204,7 @@ export default {
     subtitle: 'Рестораны/кафе/бар, которые ведёт эта CRM — у каждого свой ключ для Staff',
     newVenuePlaceholder: 'Название нового заведения',
     add: '+ Добавить',
+    renameVenue: 'Переименовать заведение',
     active: 'активно',
     hidden: 'скрыто',
     apiKeyLabel: 'API-ключ для Staff этого заведения',

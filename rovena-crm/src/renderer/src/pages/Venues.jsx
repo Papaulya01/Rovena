@@ -42,6 +42,8 @@ export default function Venues({ onVenuesChanged }) {
   const [showUserForm, setShowUserForm] = useState(false)
   const [userForm, setUserForm] = useState(EMPTY_USER)
   const [userError, setUserError] = useState('')
+  const [editingVenueId, setEditingVenueId] = useState(null)
+  const [editingName, setEditingName] = useState('')
 
   const load = () => {
     window.rovena.venues.list().then(setVenues)
@@ -79,6 +81,19 @@ export default function Venues({ onVenuesChanged }) {
   async function toggleUserActive(u) {
     await window.rovena.auth.setUserActive({ userId: u.id, isActive: u.is_active ? 0 : 1 })
     load()
+  }
+
+  function startRenameVenue(v) {
+    setEditingVenueId(v.id)
+    setEditingName(v.name)
+  }
+
+  async function saveRenameVenue(id) {
+    if (!editingName.trim()) return
+    await window.rovena.venues.update({ id, name: editingName.trim() })
+    setEditingVenueId(null)
+    load()
+    onVenuesChanged?.()
   }
 
   async function addVenue(e) {
@@ -126,7 +141,37 @@ export default function Venues({ onVenuesChanged }) {
               <div className="accordion-title">
                 <span className={`dot ${v.is_active ? 'online' : 'offline'}`} />
                 <div>
-                  {v.name}
+                  {editingVenueId === v.id ? (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        style={{ maxWidth: 220 }}
+                        autoFocus
+                      />
+                      <button className="btn" type="button" onClick={() => saveRenameVenue(v.id)}>
+                        {t('common.save')}
+                      </button>
+                      <button className="btn secondary" type="button" onClick={() => setEditingVenueId(null)}>
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {v.name}
+                      <button
+                        type="button"
+                        className="venue-rename-btn"
+                        title={t('venues.renameVenue')}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          startRenameVenue(v)
+                        }}
+                      >
+                        ✎
+                      </button>
+                    </>
+                  )}
                   <div className="accordion-sub">{v.is_active ? t('venues.active') : t('venues.hidden')}</div>
                 </div>
               </div>

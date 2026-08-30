@@ -1230,6 +1230,21 @@ input[type='radio']:disabled {
   color: var(--expense);
 }
 
+.venue-rename-btn {
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  margin-left: 6px;
+}
+
+.venue-rename-btn:hover {
+  color: var(--accent);
+}
+
 .category-row-delete:disabled {
   color: #d8dbd4;
   cursor: not-allowed;

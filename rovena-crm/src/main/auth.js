@@ -37,17 +37,26 @@ function venueIdsForUser(userId) {
     .map((r) => r.venue_id)
 }
 
-/** Первичная настройка: создаёт первого админа и заведение (с указанным названием, если ещё не создано). */
+/** Первичная настройка: создаёт первого админа и заведение (с указанным названием). */
 export function setupFirstAdmin({ username, password, displayName, venueName }) {
   if (hasUsers()) throw new Error('already_set_up')
   if (!username || !password || password.length < 6) throw new Error('invalid_input')
 
   const db = getDb()
+  const trimmedVenueName = (venueName || '').trim() || 'Моё заведение'
+  // Миграция (см. db.js) на каждом старте гарантирует хотя бы одно заведение —
+  // на чистой базе оно уже существует как заглушка "Заведение 1" ещё до того,
+  // как пользователь дошёл до этого экрана. hasUsers() выше гарантирует, что
+  // это точно первый запуск, поэтому здесь безопасно переименовать заглушку
+  // в то, что пользователь реально ввёл, а не тихо её игнорировать.
   const venue = db.prepare(`SELECT id FROM venues ORDER BY id LIMIT 1`).get()
-  const venueId = venue
-    ? venue.id
-    : db.prepare(`INSERT INTO venues (name) VALUES (?)`).run((venueName || '').trim() || 'Моё заведение')
-        .lastInsertRowid
+  let venueId
+  if (venue) {
+    db.prepare(`UPDATE venues SET name = ? WHERE id = ?`).run(trimmedVenueName, venue.id)
+    venueId = venue.id
+  } else {
+    venueId = db.prepare(`INSERT INTO venues (name) VALUES (?)`).run(trimmedVenueName).lastInsertRowid
+  }
 
   const info = db
     .prepare(`INSERT INTO users (username, password_hash, display_name, role) VALUES (?, ?, ?, 'admin')`)

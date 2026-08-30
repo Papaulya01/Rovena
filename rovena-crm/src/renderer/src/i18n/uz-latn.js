@@ -204,6 +204,7 @@ export default {
     subtitle: "Ushbu CRM boshqaradigan restoran/kafe/bar — har birining o'z Staff kaliti bor",
     newVenuePlaceholder: 'Yangi muassasa nomi',
     add: "+ Qo'shish",
+    renameVenue: "Muassasa nomini o'zgartirish",
     active: 'faol',
     hidden: 'yashirilgan',
     apiKeyLabel: 'Ushbu muassasaning Staff uchun API-kaliti',

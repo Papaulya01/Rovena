@@ -204,6 +204,7 @@ export default {
     subtitle: 'Ушбу CRM бошқарадиган ресторан/кафе/бар — ҳар бирининг ўз Staff калити бор',
     newVenuePlaceholder: 'Янги муассаса номи',
     add: '+ Қўшиш',
+    renameVenue: 'Муассаса номини ўзгартириш',
     active: 'фаол',
     hidden: 'яширилган',
     apiKeyLabel: 'Ушбу муассасанинг Staff учун API-калити',

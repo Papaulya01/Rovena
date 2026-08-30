@@ -782,7 +782,12 @@ export function getTaxSettings(venueId) {
   const db = getDb()
   let row = db.prepare(`SELECT * FROM tax_settings WHERE venue_id = ?`).get(venueId)
   if (!row) {
-    db.prepare(`INSERT INTO tax_settings (venue_id) VALUES (?)`).run(venueId)
+    // По умолчанию берём название компании из названия заведения — админ его
+    // уже вводил при первом запуске, незачем просить ввести то же самое дважды.
+    // Это только стартовое значение: перезаписывается, как только админ
+    // сохранит "Реквизиты" со своим текстом.
+    const venue = db.prepare(`SELECT name FROM venues WHERE id = ?`).get(venueId)
+    db.prepare(`INSERT INTO tax_settings (venue_id, company_name) VALUES (?, ?)`).run(venueId, venue?.name || null)
     row = db.prepare(`SELECT * FROM tax_settings WHERE venue_id = ?`).get(venueId)
   }
   return row
