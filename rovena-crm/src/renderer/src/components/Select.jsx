@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
  */
 export default function Select({ value, onChange, options, placeholder, disabled, style, className = '' }) {
   const [open, setOpen] = useState(false)
+  const [dropUp, setDropUp] = useState(false)
   const rootRef = useRef(null)
 
   useEffect(() => {
@@ -25,6 +26,16 @@ export default function Select({ value, onChange, options, placeholder, disabled
     }
   }, [open])
 
+  function handleToggle() {
+    if (!open && rootRef.current) {
+      const rect = rootRef.current.getBoundingClientRect()
+      const estimatedListHeight = Math.min(260, options.length * 34 + 8)
+      const spaceBelow = window.innerHeight - rect.bottom
+      setDropUp(spaceBelow < estimatedListHeight && rect.top > spaceBelow)
+    }
+    setOpen((v) => !v)
+  }
+
   const current = options.find((o) => String(o.value) === String(value))
 
   return (
@@ -33,12 +44,12 @@ export default function Select({ value, onChange, options, placeholder, disabled
         type="button"
         className="custom-select-trigger"
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
       >
         <span className={current ? '' : 'placeholder'}>{current ? current.label : placeholder || ''}</span>
       </button>
       {open && (
-        <div className="custom-select-list" role="listbox">
+        <div className={`custom-select-list${dropUp ? ' dropup' : ''}`} role="listbox">
           {options.map((o) => (
             <div
               key={o.value}
