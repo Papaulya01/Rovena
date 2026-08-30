@@ -125,7 +125,8 @@ const ru = {
   orderStatusDone: 'выполнен',
   orderStatusCancelled: 'отменён',
   statusUpdateProcessing: 'Ваш заказ №{id} подтверждён и готовится к отправке ✅ Отменить его через бота уже нельзя.',
-  staffOrderCancelledByGuest: '❌ Гость отменил заказ №{id} на {total} — {name} ({contact})'
+  staffOrderCancelledByGuest: '❌ Гость отменил заказ №{id} на {total} — {name} ({contact})',
+  testNotifyMessage: '🔔 Тестовое уведомление из Rovena-CRM — если вы это видите, chat_id указан верно.'
 }
 
 const uzLatn = {
@@ -249,7 +250,8 @@ const uzLatn = {
   orderStatusDone: 'bajarildi',
   orderStatusCancelled: 'bekor qilindi',
   statusUpdateProcessing: 'Buyurtmangiz №{id} tasdiqlandi va jo\'natishga tayyorlanmoqda ✅ Uni botdan bekor qilib bo\'lmaydi.',
-  staffOrderCancelledByGuest: '❌ Mehmon buyurtma №{id}ni bekor qildi, summasi {total} — {name} ({contact})'
+  staffOrderCancelledByGuest: '❌ Mehmon buyurtma №{id}ni bekor qildi, summasi {total} — {name} ({contact})',
+  testNotifyMessage: "🔔 Rovena-CRM'dan test xabarnomasi — buni ko'rsangiz, chat_id to'g'ri kiritilgan."
 }
 
 const uzCyrl = {
@@ -373,7 +375,8 @@ const uzCyrl = {
   orderStatusDone: 'бажарилди',
   orderStatusCancelled: 'бекор қилинди',
   statusUpdateProcessing: 'Буюртмангиз №{id} тасдиқланди ва жўнатишга тайёрланмоқда ✅ Уни ботдан бекор қилиб бўлмайди.',
-  staffOrderCancelledByGuest: '❌ Меҳмон буюртма №{id}ни бекор қилди, суммаси {total} — {name} ({contact})'
+  staffOrderCancelledByGuest: '❌ Меҳмон буюртма №{id}ни бекор қилди, суммаси {total} — {name} ({contact})',
+  testNotifyMessage: "🔔 Rovena-CRM'дан тест хабарномаси — буни кўрсангиз, chat_id тўғри киритилган."
 }
 
 const DICTS = { ru, 'uz-latn': uzLatn, 'uz-cyrl': uzCyrl }

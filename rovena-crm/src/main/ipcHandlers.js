@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs'
 import * as repo from './repo.js'
 import * as auth from './auth.js'
 import { startServer, stopServer, getServerStatus, generateApiKey } from './server.js'
-import { startBot, stopBot, getBotStatus, notifyOrderStatus, notifyBookingStatus } from './bot.js'
+import { startBot, stopBot, getBotStatus, notifyOrderStatus, notifyBookingStatus, testNotify } from './bot.js'
 import { getUpdaterStatus, checkForUpdates, downloadUpdate, quitAndInstall } from './updater.js'
 
 function currentVenueId() {
@@ -67,6 +67,10 @@ export function registerIpcHandlers() {
   ipcMain.handle('auth:changePassword', (_e, { userId, newPassword }) => {
     requireRole('admin')
     return auth.changePassword(userId, newPassword)
+  })
+  ipcMain.handle('auth:updateUser', (_e, { userId, ...payload }) => {
+    requireRole('admin')
+    return auth.updateUser(userId, payload)
   })
 
   // ---------- Venues (заведения) — только админ ----------
@@ -290,6 +294,10 @@ export function registerIpcHandlers() {
   ipcMain.handle('botSettings:update', (_e, payload) => {
     requireRole('admin')
     return repo.updateBotSettings(currentVenueId(), payload)
+  })
+  ipcMain.handle('bot:testNotify', (_e, chatId) => {
+    requireRole('admin')
+    return testNotify(chatId)
   })
 
   // ---------- Экспорт отчёта в файл (CSV/Excel) через нативный диалог "Сохранить как" ----------

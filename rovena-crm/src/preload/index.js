@@ -15,7 +15,8 @@ const api = {
     createUser: (payload) => ipcRenderer.invoke('auth:createUser', payload),
     updateUserVenues: (payload) => ipcRenderer.invoke('auth:updateUserVenues', payload),
     setUserActive: (payload) => ipcRenderer.invoke('auth:setUserActive', payload),
-    changePassword: (payload) => ipcRenderer.invoke('auth:changePassword', payload)
+    changePassword: (payload) => ipcRenderer.invoke('auth:changePassword', payload),
+    updateUser: (payload) => ipcRenderer.invoke('auth:updateUser', payload)
   },
   venues: {
     list: () => ipcRenderer.invoke('venues:list'),
@@ -125,7 +126,8 @@ const api = {
   bot: {
     start: (token) => ipcRenderer.invoke('bot:start', token),
     stop: () => ipcRenderer.invoke('bot:stop'),
-    status: () => ipcRenderer.invoke('bot:status')
+    status: () => ipcRenderer.invoke('bot:status'),
+    testNotify: (chatId) => ipcRenderer.invoke('bot:testNotify', chatId)
   },
   audit: {
     list: () => ipcRenderer.invoke('audit:list')

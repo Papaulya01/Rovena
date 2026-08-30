@@ -55,13 +55,18 @@ export default function Bookings() {
                 <tr key={b.id}>
                   <td>#{b.id}</td>
                   <td>{b.source}</td>
-                  <td>{b.client_name || '—'}</td>
+                  <td>
+                    {b.client_name || '—'}
+                    {b.client_contact && (
+                      <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>{b.client_contact}</div>
+                    )}
+                  </td>
                   <td>{b.table_name ? `${b.table_name} (${b.table_capacity})` : '—'}</td>
                   <td>{b.purpose || '—'}</td>
                   <td>{formatDateTime(b.date_from)}</td>
                   <td>{formatDateTime(b.date_to)}</td>
                   <td>
-                    <span className={`badge status-${b.status}`}>{b.status}</span>
+                    <span className={`badge status-${b.status}`}>{t(`cashier.orderStatuses.${b.status}`)}</span>
                   </td>
                   <td>
                     {b.status !== 'confirmed' && b.status !== 'cancelled' && (

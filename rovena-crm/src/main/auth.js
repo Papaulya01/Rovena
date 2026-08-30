@@ -168,6 +168,22 @@ export function setUserActive(userId, isActive) {
   getDb().prepare(`UPDATE users SET is_active = ? WHERE id = ?`).run(isActive ? 1 : 0, userId)
 }
 
+export function updateUser(userId, { displayName, role }) {
+  const db = getDb()
+  const fields = []
+  const params = { id: userId }
+  if (displayName !== undefined) {
+    fields.push('display_name = @displayName')
+    params.displayName = displayName
+  }
+  if (role !== undefined) {
+    fields.push('role = @role')
+    params.role = role
+  }
+  if (fields.length === 0) return
+  db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = @id`).run(params)
+}
+
 export function changePassword(userId, newPassword) {
   if (!newPassword || newPassword.length < 6) throw new Error('invalid_input')
   getDb().prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(hashPassword(newPassword), userId)

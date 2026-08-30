@@ -27,6 +27,91 @@ function CopyChip({ value, placeholder }) {
 
 const EMPTY_USER = { username: '', password: '', displayName: '', role: 'admin', venueIds: [] }
 
+function EditUserModal({ user, venues, roles, onClose, onSaved }) {
+  const { t } = useI18n()
+  const [displayName, setDisplayName] = useState(user.display_name || '')
+  const [role, setRole] = useState(user.role)
+  const [venueIds, setVenueIds] = useState(user.venues.map((v) => v.id))
+  const [newPassword, setNewPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  function toggleVenue(id) {
+    setVenueIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
+  }
+
+  async function save(e) {
+    e.preventDefault()
+    setError('')
+    if (venueIds.length === 0) {
+      setError(t('venues.userValidationError'))
+      return
+    }
+    if (newPassword && newPassword.length < 6) {
+      setError(t('venues.passwordTooShort'))
+      return
+    }
+    setBusy(true)
+    try {
+      await window.rovena.auth.updateUser({ userId: user.id, displayName, role })
+      await window.rovena.auth.updateUserVenues({ userId: user.id, venueIds })
+      if (newPassword) await window.rovena.auth.changePassword({ userId: user.id, newPassword })
+      onSaved()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="card" style={{ maxWidth: 420, width: '100%' }} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ marginTop: 0 }}>
+          {t('venues.editUserTitle')}: {user.username}
+        </h3>
+        <form onSubmit={save}>
+          <div style={{ marginBottom: 12 }}>
+            <label>{t('venues.displayName')}</label>
+            <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label>{t('venues.role')}</label>
+            <Select value={role} onChange={setRole} options={roles} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label>{t('venues.venueAccess')}</label>
+            <div className="radio-group">
+              {venues.map((v) => (
+                <label className="checkbox-label" key={v.id}>
+                  <input type="checkbox" checked={venueIds.includes(v.id)} onChange={() => toggleVenue(v.id)} />
+                  {v.name}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label>{t('venues.newPasswordOptional')}</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder={t('venues.leaveEmptyToKeep')}
+            />
+          </div>
+          {error && <div className="auth-error">{error}</div>}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn" type="submit" disabled={busy}>
+              {t('common.save')}
+            </button>
+            <button className="btn secondary" type="button" onClick={onClose} disabled={busy}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function Venues({ onVenuesChanged }) {
   const { t } = useI18n()
   const ROLES = [
@@ -44,6 +129,7 @@ export default function Venues({ onVenuesChanged }) {
   const [userError, setUserError] = useState('')
   const [editingVenueId, setEditingVenueId] = useState(null)
   const [editingName, setEditingName] = useState('')
+  const [editingUser, setEditingUser] = useState(null)
 
   const load = () => {
     window.rovena.venues.list().then(setVenues)
@@ -286,7 +372,10 @@ export default function Venues({ onVenuesChanged }) {
                       {u.is_active ? t('venues.activeUser') : t('venues.disabledUser')}
                     </span>
                   </td>
-                  <td>
+                  <td style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn secondary" onClick={() => setEditingUser(u)}>
+                      {t('common.edit')}
+                    </button>
                     <button className="btn secondary" onClick={() => toggleUserActive(u)}>
                       {u.is_active ? t('venues.disable') : t('venues.enable')}
                     </button>
@@ -297,6 +386,19 @@ export default function Venues({ onVenuesChanged }) {
           </table>
         )}
       </div>
+
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          venues={venues}
+          roles={ROLES}
+          onClose={() => setEditingUser(null)}
+          onSaved={() => {
+            setEditingUser(null)
+            load()
+          }}
+        />
+      )}
     </div>
   )
 }

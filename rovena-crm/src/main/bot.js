@@ -1086,6 +1086,23 @@ export async function notifyBookingStatus(booking, status) {
   )
 }
 
+/**
+ * Тестовое сообщение в chat_id для уведомлений — чтобы админ мог сразу
+ * проверить, правильно ли указан chat_id, не дожидаясь настоящего заказа/брони.
+ * Возвращает явную причину неудачи (не проглатывает ошибку в console.error,
+ * как остальные уведомления) — именно её и не хватало для диагностики.
+ */
+export async function testNotify(chatId) {
+  if (!running) return { success: false, error: 'bot_not_running' }
+  if (!chatId) return { success: false, error: 'no_chat_id' }
+  try {
+    await sendMessage(chatId, t('ru', 'testNotifyMessage'))
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e.message }
+  }
+}
+
 // ---------- Управление ботом ----------
 
 async function pollLoop() {

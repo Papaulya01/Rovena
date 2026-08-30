@@ -331,6 +331,7 @@ export default function Employees() {
   const [users, setUsers] = useState([])
   const [venueId, setVenueId] = useState(null)
   const [accessModalEmployee, setAccessModalEmployee] = useState(null)
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null)
 
   const monthCells = useMemo(() => buildMonthCells(viewDate), [viewDate])
   const linkedUserIds = useMemo(
@@ -364,16 +365,37 @@ export default function Employees() {
     return map
   }, [schedule])
 
-  async function addEmployee(e) {
+  async function saveEmployee(e) {
     e.preventDefault()
     if (!employeeForm.full_name) return
-    await window.rovena.employees.create({
-      ...employeeForm,
-      salary_rate: unformatPrice(employeeForm.salary_rate)
-    })
+    const payload = { ...employeeForm, salary_rate: unformatPrice(employeeForm.salary_rate) }
+    if (editingEmployeeId) {
+      await window.rovena.employees.update({ id: editingEmployeeId, ...payload })
+    } else {
+      await window.rovena.employees.create(payload)
+    }
     setEmployeeForm(EMPTY_EMPLOYEE)
+    setEditingEmployeeId(null)
     setShowEmployeeForm(false)
     loadEmployees()
+  }
+
+  function startEditEmployee(emp) {
+    setEditingEmployeeId(emp.id)
+    setEmployeeForm({
+      full_name: emp.full_name,
+      position: emp.position,
+      phone: emp.phone || '',
+      salary_type: emp.salary_type,
+      salary_rate: emp.salary_rate ? formatMoney(emp.salary_rate) : ''
+    })
+    setShowEmployeeForm(true)
+  }
+
+  function cancelEmployeeForm() {
+    setEmployeeForm(EMPTY_EMPLOYEE)
+    setEditingEmployeeId(null)
+    setShowEmployeeForm(false)
   }
 
   async function toggleActive(emp) {
@@ -393,13 +415,16 @@ export default function Employees() {
           <h1>{t('employees.title')}</h1>
           <p>{t('employees.subtitle')}</p>
         </div>
-        <button className="btn" onClick={() => setShowEmployeeForm((v) => !v)}>
+        <button
+          className="btn"
+          onClick={() => (showEmployeeForm ? cancelEmployeeForm() : setShowEmployeeForm(true))}
+        >
           {showEmployeeForm ? t('common.cancel') : t('employees.addEmployee')}
         </button>
       </div>
 
       {showEmployeeForm && (
-        <form className="card" style={{ marginBottom: 20 }} onSubmit={addEmployee}>
+        <form className="card" style={{ marginBottom: 20 }} onSubmit={saveEmployee}>
           <div className="form-row">
             <div>
               <label>{t('employees.fullName')}</label>
@@ -452,7 +477,7 @@ export default function Employees() {
             </div>
           </div>
           <button className="btn" type="submit">
-            {t('employees.addSubmit')}
+            {editingEmployeeId ? t('common.save') : t('employees.addSubmit')}
           </button>
         </form>
       )}
@@ -509,6 +534,9 @@ export default function Employees() {
                       )}
                     </td>
                     <td style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn secondary" onClick={() => startEditEmployee(emp)}>
+                        {t('common.edit')}
+                      </button>
                       <button className="btn secondary" onClick={() => toggleActive(emp)}>
                         {emp.is_active ? t('common.hide') : t('common.show')}
                       </button>

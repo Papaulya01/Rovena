@@ -133,6 +133,8 @@ export default function Connections() {
   const [updater, setUpdater] = useState({ state: 'idle', currentVersion: '', info: null })
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [botSettings, setBotSettings] = useState(null)
+  const [testingNotify, setTestingNotify] = useState(false)
+  const [testNotifyResult, setTestNotifyResult] = useState(null)
 
   useEffect(() => {
     window.rovena.updater.status().then(setUpdater)
@@ -275,6 +277,17 @@ export default function Connections() {
     setBotSettings((prev) => ({ ...prev, [field]: value }))
     await window.rovena.botSettings.update({ [field]: value })
     load()
+  }
+
+  async function testNotify() {
+    setTestingNotify(true)
+    setTestNotifyResult(null)
+    try {
+      const result = await window.rovena.bot.testNotify(botSettings.notify_chat_id)
+      setTestNotifyResult(result)
+    } finally {
+      setTestingNotify(false)
+    }
   }
 
   async function handleQrChange(e) {
@@ -507,11 +520,36 @@ export default function Connections() {
 
               <div style={{ marginBottom: 14 }}>
                 <label>{t('connections.notifyChatIdLabel')}</label>
-                <input
-                  value={botSettings.notify_chat_id || ''}
-                  onChange={(e) => saveBotSetting('notify_chat_id', e.target.value)}
-                  placeholder={t('connections.notifyChatIdPlaceholder')}
-                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    style={{ flex: 1 }}
+                    value={botSettings.notify_chat_id || ''}
+                    onChange={(e) => saveBotSetting('notify_chat_id', e.target.value)}
+                    placeholder={t('connections.notifyChatIdPlaceholder')}
+                  />
+                  <button
+                    className="btn secondary"
+                    type="button"
+                    disabled={testingNotify || !botSettings.notify_chat_id || !botStatus.running}
+                    onClick={testNotify}
+                  >
+                    {testingNotify ? t('connections.testNotifySending') : t('connections.testNotifyButton')}
+                  </button>
+                </div>
+                {testNotifyResult && (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      marginTop: 6,
+                      marginBottom: 0,
+                      color: testNotifyResult.success ? 'var(--income)' : 'var(--expense)'
+                    }}
+                  >
+                    {testNotifyResult.success
+                      ? t('connections.testNotifySuccess')
+                      : `${t('connections.testNotifyFailed')}${testNotifyResult.error ? `: ${testNotifyResult.error}` : ''}`}
+                  </p>
+                )}
                 <p style={{ color: 'var(--ink-soft)', fontSize: 11.5, marginTop: 6, marginBottom: 0 }}>
                   {t('connections.notifyChatIdHint')}
                 </p>

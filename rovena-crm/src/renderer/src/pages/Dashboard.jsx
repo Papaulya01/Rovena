@@ -12,15 +12,20 @@ export default function Dashboard() {
   const STATUS_LABEL = { free: t('dashboard.statusFree'), reserved: t('dashboard.statusReserved'), occupied: t('dashboard.statusOccupied') }
 
   useEffect(() => {
-    window.rovena.finance.summary().then(setSummary)
-    window.rovena.orders.list().then((list) => setOrders(list.slice(0, 5)))
-    window.rovena.bookings.list().then((list) => setBookings(list.slice(0, 5)))
-
-    const loadTables = () => window.rovena.tables.statuses().then(setTableStatuses)
-    loadTables()
-    const interval = setInterval(loadTables, 30000)
+    const loadAll = () => {
+      window.rovena.finance.summary().then(setSummary)
+      window.rovena.orders.list().then((list) => setOrders(list.slice(0, 5)))
+      window.rovena.bookings.list().then((list) => setBookings(list.slice(0, 5)))
+      window.rovena.tables.statuses().then(setTableStatuses)
+    }
+    loadAll()
+    const interval = setInterval(loadAll, 15000)
     return () => clearInterval(interval)
   }, [])
+
+  function sourceLabel(source) {
+    return source === 'bot' ? '🤖 Bot' : source === 'staff' ? '📱 Staff' : t('dashboard.sourceCrm')
+  }
 
   return (
     <div>
@@ -81,7 +86,7 @@ export default function Dashboard() {
                     <div className="table-card-order">
                       {t2.openOrders.map((o) => (
                         <div key={o.id} className="table-card-order-row">
-                          <span className={`badge status-${o.status}`}>{o.status}</span>
+                          <span className={`badge status-${o.status}`}>{t(`cashier.orderStatuses.${o.status}`)}</span>
                           <span className="table-card-order-items">
                             {o.items.map((i) => `${i.name} ×${i.qty}`).join(', ') || t('dashboard.noItems')}
                           </span>
@@ -120,9 +125,15 @@ export default function Dashboard() {
                 {orders.map((o) => (
                   <tr key={o.id}>
                     <td>#{o.id}</td>
-                    <td>{o.client_name || '—'}</td>
                     <td>
-                      <span className={`badge status-${o.status}`}>{o.status}</span>
+                      {o.client_name || (o.delivery ? t('dashboard.noName') : '—')}
+                      <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>
+                        {sourceLabel(o.source)}
+                        {o.delivery ? ` · ${t('common2.delivery')}` : ''}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`badge status-${o.status}`}>{t(`cashier.orderStatuses.${o.status}`)}</span>
                     </td>
                     <td>{formatMoney(o.total_amount)}</td>
                   </tr>
@@ -142,10 +153,13 @@ export default function Dashboard() {
                 {bookings.map((b) => (
                   <tr key={b.id}>
                     <td>#{b.id}</td>
-                    <td>{b.client_name || '—'}</td>
+                    <td>
+                      {b.client_name || t('dashboard.noName')}
+                      <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>{sourceLabel(b.source)}</div>
+                    </td>
                     <td>{formatDateTime(b.date_from)}</td>
                     <td>
-                      <span className={`badge status-${b.status}`}>{b.status}</span>
+                      <span className={`badge status-${b.status}`}>{t(`cashier.orderStatuses.${b.status}`)}</span>
                     </td>
                   </tr>
                 ))}
