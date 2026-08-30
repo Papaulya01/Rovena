@@ -165,7 +165,8 @@ export default {
     title: 'Buyurtmalar',
     subtitle: "Buyurtmalar Staff va Bot orqali yaratiladi — bu yerda faqat ko'rish va holatni nazorat qilish",
     noOrders: "Hozircha buyurtmalar yo'q — Staff yoki bot birinchi buyurtmani qabul qilganda bu yerda paydo bo'ladi",
-    closeReceipt: 'Chekni yopish'
+    closeReceipt: 'Chekni yopish',
+    deliveryColumn: "Yetkazib berish / manzil"
   },
   menuPage: {
     title: 'Menyu',
@@ -313,6 +314,7 @@ export default {
     author: 'Muallif',
     tabLedger: 'Amallar',
     tabReports: 'Hisobotlar',
+    tabAnalytics: 'Analitika',
     tabSettings: 'Soliqlar va hujjatlar'
   },
   reports: {
@@ -538,5 +540,16 @@ export default {
       "CRM loyihaning GitHub Releases'ida yangi versiyalarni tekshiradi. Versiya mavjud bo'lganda, bu yerda o'zgarishlar ro'yxati paydo bo'ladi — avval nima yangiligini ko'rish mumkin, faqat shundan keyin «Yangilanishni yuklab olish»ni bosish mumkin. Yuklab olingandan so'ng o'rnatish «O'rnatish va qayta ishga tushirish» tugmasi orqali amalga oshiriladi — CRM yopiladi va yangi versiyaga avtomatik qayta o'rnatiladi, odatdagi o'rnatish oynasisiz.",
     modulesEmptyState:
       "Bu yerda CRM ning yoqiladigan modullari (masalan, sodiqlik dasturi, aksiyalar, integratsiyalar) paydo bo'ladi — aniq modullarning ro'yxati va sozlamalari hali aniqlanmagan."
+  },
+  analytics: {
+    topDishesTitle: 'Daromad bo\'yicha top taomlar',
+    noDishData: "Bu davrda hali buyurtmalar bo'lmagan",
+    deliveryChartTitle: 'Kunlar bo\'yicha yetkazib berish',
+    dineIn: 'Zalda',
+    delivery: 'Yetkazib berish',
+    deliveryShare: 'Yetkazib berish ulushi',
+    deliveryOrders: 'Yetkazib berish buyurtmalari',
+    deliveryRevenue: 'Yetkazib berishdan tushum',
+    noDeliveryData: "Bu davrda hali buyurtmalar bo'lmagan"
   }
 }

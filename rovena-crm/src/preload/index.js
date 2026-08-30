@@ -84,6 +84,10 @@ const api = {
     monthly: (months) => ipcRenderer.invoke('finance:monthly', months),
     categoryBreakdown: (type) => ipcRenderer.invoke('finance:categoryBreakdown', type)
   },
+  analytics: {
+    dishes: (range) => ipcRenderer.invoke('analytics:dishes', range),
+    delivery: (range) => ipcRenderer.invoke('analytics:delivery', range)
+  },
   taxSettings: {
     get: () => ipcRenderer.invoke('taxSettings:get'),
     update: (payload) => ipcRenderer.invoke('taxSettings:update', payload)

@@ -44,7 +44,7 @@ export default function Orders() {
                 <th>{t('tables.table')}</th>
                 <th>{t('common2.client')}</th>
                 <th>{t('cashier.items')}</th>
-                <th>{t('common2.delivery')}</th>
+                <th>{t('orders.deliveryColumn')}</th>
                 <th>{t('common2.amount')}</th>
                 <th>{t('cashier.status')}</th>
                 <th></th>
@@ -56,14 +56,19 @@ export default function Orders() {
                   <td>#{o.id}</td>
                   <td>{o.source}</td>
                   <td>{o.table_name || '—'}</td>
-                  <td>{o.client_name || '—'}</td>
+                  <td>
+                    {o.client_name || '—'}
+                    {o.client_contact && (
+                      <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>{o.client_contact}</div>
+                    )}
+                  </td>
                   <td style={{ maxWidth: 240 }}>
                     {o.items.length > 0 ? o.items.map((i) => `${i.name} ×${i.qty}`).join(', ') : '—'}
                   </td>
-                  <td>{o.delivery ? t('common.yes') : t('common.no')}</td>
+                  <td style={{ maxWidth: 200 }}>{o.delivery ? o.delivery_address || t('common.yes') : '—'}</td>
                   <td>{formatMoney(o.total_amount)}</td>
                   <td>
-                    <span className={`badge status-${o.status}`}>{o.status}</span>
+                    <span className={`badge status-${o.status}`}>{t(`cashier.orderStatuses.${o.status}`)}</span>
                   </td>
                   <td>
                     {o.status !== 'done' && o.status !== 'cancelled' && (

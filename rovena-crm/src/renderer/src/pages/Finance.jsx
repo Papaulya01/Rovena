@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { formatMoney, formatMonthLabel, formatPriceInput, unformatPrice } from '../utils/format.js'
 import Select from '../components/Select.jsx'
 import { ReportsTab, SettingsTab } from './AccountingReports.jsx'
+import { AnalyticsTab } from './Analytics.jsx'
 import { useI18n } from '../i18n/index.jsx'
 
 const EMPTY_FORM = { type: 'expense', amount: '', category: '', comment: '' }
@@ -94,6 +95,7 @@ export default function Finance() {
   const TABS = [
     { value: 'ledger', label: t('financeLedger.tabLedger') },
     { value: 'reports', label: t('financeLedger.tabReports') },
+    { value: 'analytics', label: t('financeLedger.tabAnalytics') },
     { value: 'settings', label: t('financeLedger.tabSettings') }
   ]
   const [tab, setTab] = useState('ledger')
@@ -154,6 +156,7 @@ export default function Finance() {
       </div>
 
       {tab === 'reports' && <ReportsTab />}
+      {tab === 'analytics' && <AnalyticsTab />}
       {tab === 'settings' && <SettingsTab />}
 
       {tab === 'ledger' && (

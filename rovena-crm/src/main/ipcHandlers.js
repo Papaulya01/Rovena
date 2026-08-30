@@ -231,6 +231,16 @@ export function registerIpcHandlers() {
     return repo.financeCategoryBreakdown(currentVenueId(), type)
   })
 
+  // ---------- Аналитика: продажи по блюдам и доставка ----------
+  ipcMain.handle('analytics:dishes', (_e, range) => {
+    requireRole('admin', 'accountant')
+    return repo.getDishAnalytics(currentVenueId(), range || {})
+  })
+  ipcMain.handle('analytics:delivery', (_e, range) => {
+    requireRole('admin', 'accountant')
+    return repo.getDeliveryAnalytics(currentVenueId(), range || {})
+  })
+
   // ---------- Налоговые настройки — читает admin+accountant (нужно для отчётов), меняет только admin ----------
   ipcMain.handle('taxSettings:get', () => {
     requireRole('admin', 'accountant')

@@ -180,6 +180,59 @@ export function markBookingReminderSent(id) {
   getDb().prepare(`UPDATE bookings SET reminder_sent = 1 WHERE id = ?`).run(id)
 }
 
+/**
+ * Есть ли на этом столе уже бронь, чьё условное окно (durationMinutes от
+ * date_from, если date_to не указан) пересекается с запрошенным временем —
+ * для проверки перед созданием новой брони в боте. Возвращает конфликтующую
+ * бронь или null.
+ */
+export function findBookingConflict(tableId, dateFromIso, durationMinutes = 120) {
+  if (!tableId) return null
+  const db = getDb()
+  const candidates = db
+    .prepare(`SELECT * FROM bookings WHERE table_id = ? AND status IN ('new', 'confirmed')`)
+    .all(tableId)
+  const start = new Date(dateFromIso).getTime()
+  if (Number.isNaN(start)) return null
+  const end = start + durationMinutes * 60000
+  for (const b of candidates) {
+    const bStart = new Date(b.date_from).getTime()
+    if (Number.isNaN(bStart)) continue
+    const bEnd = b.date_to ? new Date(b.date_to).getTime() : bStart + durationMinutes * 60000
+    if (start < bEnd && bStart < end) return b
+  }
+  return null
+}
+
+/** Активные (не отменённые/не прошедшие) брони этого гостя бота — для «Мои брони» и отмены. */
+export function listBotBookings(chatId, venueId) {
+  const db = getDb()
+  return db
+    .prepare(
+      `SELECT b.*, t.name as table_name
+       FROM bookings b LEFT JOIN tables t ON t.id = b.table_id
+       WHERE b.bot_chat_id = ? AND b.venue_id = ? AND b.status IN ('new', 'confirmed')
+       ORDER BY b.date_from ASC`
+    )
+    .all(String(chatId), venueId)
+}
+
+/** История заказов этого гостя бота (для «Повторить заказ»), последние — первыми. */
+export function listBotOrderHistory(chatId, venueId, limit = 10) {
+  const db = getDb()
+  const orders = db
+    .prepare(
+      `SELECT o.*, t.name as table_name
+       FROM orders o LEFT JOIN tables t ON t.id = o.table_id
+       WHERE o.bot_chat_id = ? AND o.venue_id = ? AND o.status != 'cancelled'
+       ORDER BY o.created_at DESC
+       LIMIT ?`
+    )
+    .all(String(chatId), venueId, limit)
+  const itemsStmt = db.prepare(`SELECT * FROM order_items WHERE order_id = ?`)
+  return orders.map((o) => ({ ...o, items: itemsStmt.all(o.id) }))
+}
+
 // ---------- Tables (зал) ----------
 
 export function listTables(venueId, { activeOnly = false } = {}) {
@@ -515,6 +568,91 @@ export function updateOrder(id, payload, author) {
   })
   logAudit('order', id, 'update', author, payload)
   return db.prepare(`SELECT * FROM orders WHERE id = ?`).get(id)
+}
+
+// ---------- Аналитика: продажи по блюдам и доставка (см. «Бухгалтерия → Аналитика») ----------
+
+/** Сколько продано и на какую сумму по каждому блюду (по позициям заказов, не считая отменённых заказов). */
+export function getDishAnalytics(venueId, { from, to } = {}) {
+  const db = getDb()
+  const params = { venue_id: venueId }
+  let range = ''
+  if (from) {
+    range += ' AND o.created_at >= @from'
+    params.from = from
+  }
+  if (to) {
+    range += ' AND o.created_at <= @to'
+    params.to = to + ' 23:59:59'
+  }
+  return db
+    .prepare(
+      `SELECT oi.menu_item_id, oi.name, c.name as category_name,
+              SUM(oi.qty) as total_qty, SUM(oi.qty * oi.price) as total_revenue,
+              COUNT(DISTINCT oi.order_id) as order_count
+       FROM order_items oi
+       JOIN orders o ON o.id = oi.order_id
+       LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+       LEFT JOIN categories c ON c.id = mi.category_id
+       WHERE o.venue_id = @venue_id AND o.status != 'cancelled' ${range}
+       GROUP BY oi.menu_item_id, oi.name
+       ORDER BY total_revenue DESC`
+    )
+    .all(params)
+}
+
+/** Заказы в зале vs доставка по дням — для графика и сводки доли доставки. */
+export function getDeliveryAnalytics(venueId, { from, to } = {}) {
+  const db = getDb()
+  const params = { venue_id: venueId }
+  let range = ''
+  if (from) {
+    range += ' AND created_at >= @from'
+    params.from = from
+  }
+  if (to) {
+    range += ' AND created_at <= @to'
+    params.to = to + ' 23:59:59'
+  }
+  const rows = db
+    .prepare(
+      `SELECT date(created_at) as day, delivery, COUNT(*) as cnt, SUM(total_amount) as total
+       FROM orders
+       WHERE venue_id = @venue_id AND status != 'cancelled' ${range}
+       GROUP BY day, delivery
+       ORDER BY day`
+    )
+    .all(params)
+
+  const byDay = new Map()
+  for (const r of rows) {
+    if (!byDay.has(r.day)) {
+      byDay.set(r.day, { day: r.day, deliveryCount: 0, deliveryTotal: 0, dineInCount: 0, dineInTotal: 0 })
+    }
+    const entry = byDay.get(r.day)
+    if (r.delivery) {
+      entry.deliveryCount = r.cnt
+      entry.deliveryTotal = r.total
+    } else {
+      entry.dineInCount = r.cnt
+      entry.dineInTotal = r.total
+    }
+  }
+  const days = Array.from(byDay.values())
+  const totalDelivery = days.reduce((s, d) => s + d.deliveryCount, 0)
+  const totalDineIn = days.reduce((s, d) => s + d.dineInCount, 0)
+  const totalDeliveryRevenue = days.reduce((s, d) => s + d.deliveryTotal, 0)
+  const totalDineInRevenue = days.reduce((s, d) => s + d.dineInTotal, 0)
+  return {
+    days,
+    summary: {
+      totalDelivery,
+      totalDineIn,
+      totalDeliveryRevenue,
+      totalDineInRevenue,
+      deliveryShare: totalDelivery + totalDineIn > 0 ? totalDelivery / (totalDelivery + totalDineIn) : 0
+    }
+  }
 }
 
 // ---------- Shifts (кассир: открыть/закрыть смену) ----------

@@ -37,6 +37,19 @@ function formatTimeLabel(iso) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+function formatShortDateTime(iso) {
+  const d = new Date(iso)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** Кнопка "Связаться с клиентом" для уведомлений персоналу — по телефону, если он есть, иначе через Telegram. */
+function contactClientRow(clientContact, chatId) {
+  const isPhone = clientContact && /^\+?\d[\d\s()-]{5,}$/.test(clientContact)
+  const url = isPhone ? `tel:${clientContact.replace(/[^\d+]/g, '')}` : `tg://user?id=${chatId}`
+  return [{ text: t('ru', 'btnContactClient'), url }]
+}
+
 async function callApi(method, params) {
   const res = await fetch(`${TELEGRAM_API}${botToken}/${method}`, {
     method: 'POST',
@@ -110,7 +123,8 @@ function freshSession(customer) {
     arrivalIso: null, // null = "сейчас/как можно скорее"
     regName: null,
     currentCategoryId: null,
-    menuMessageId: null
+    menuMessageId: null,
+    cancelBookingId: null
   }
 }
 
@@ -135,6 +149,7 @@ function mainMenuKeyboard(session) {
   return replyKb([
     [tr(session, 'btnOrder'), tr(session, 'btnBook')],
     [tr(session, 'btnTables'), tr(session, 'btnMenu')],
+    [tr(session, 'btnHistory'), tr(session, 'btnMyBookings')],
     [tr(session, 'btnRegister'), tr(session, 'btnLang')],
     [tr(session, 'btnHelp')]
   ])
@@ -151,6 +166,7 @@ async function showMainMenu(chatId, session) {
   session.arrivalIso = null
   session.currentCategoryId = null
   session.menuMessageId = null
+  session.cancelBookingId = null
   await sendMessage(chatId, tr(session, 'backToMenu'), { reply_markup: mainMenuKeyboard(session) })
 }
 
@@ -240,6 +256,126 @@ async function showMenuReadonly(chatId, session) {
     for (const item of catItems) text += `• ${escapeHtml(item.name)} — ${formatMoney(item.price)}\n`
   }
   await sendMessage(chatId, text.trim(), { parse_mode: 'HTML' })
+}
+
+// ---------- История заказов (повторить прошлый заказ) ----------
+
+async function showOrderHistory(chatId, session) {
+  const venueId = defaultVenueId()
+  const orders = venueId ? repo.listBotOrderHistory(chatId, venueId) : []
+  if (orders.length === 0) {
+    await sendMessage(chatId, tr(session, 'noOrderHistory'))
+    return
+  }
+  const rows = orders.map((o) => {
+    const summary = o.items.map((i) => `${i.name} ×${i.qty}`).join(', ')
+    const label = `${formatShortDateTime(o.created_at)} — ${formatMoney(o.total_amount)} (${summary}`.slice(0, 60) + ')'
+    return [[label, `repeat:${o.id}`]]
+  })
+  await sendMessage(chatId, tr(session, 'orderHistoryTitle'), { reply_markup: inlineKb(rows) })
+}
+
+async function repeatOrder(chatId, session, orderId, callbackId) {
+  const venueId = defaultVenueId()
+  const order = repo.listBotOrderHistory(chatId, venueId, 50).find((o) => o.id === orderId)
+  if (!order) {
+    await answerCallback(callbackId, tr(session, 'orderHistoryItemGone'))
+    return
+  }
+  const liveItems = repo.listMenuItems(venueId, { activeOnly: true })
+  session.cart = order.items
+    .map((i) => {
+      const live = liveItems.find((li) => li.id === i.menu_item_id)
+      return live ? { menu_item_id: live.id, name: live.name, price: live.price, qty: i.qty } : null
+    })
+    .filter(Boolean)
+  await answerCallback(callbackId)
+  if (session.cart.length === 0) {
+    await sendMessage(chatId, tr(session, 'orderHistoryAllGone'))
+    return
+  }
+  session.bookingOnly = false
+  session.tableId = null
+  session.deliveryAddress = null
+  await sendMessage(chatId, tr(session, 'orderHistoryRepeated', { count: cartCount(session) }))
+  session.step = 'order_type'
+  await sendMessage(chatId, tr(session, 'orderTypePrompt'), {
+    reply_markup: inlineKb([[[tr(session, 'btnDineIn'), 'otype:dinein'], [tr(session, 'btnDelivery'), 'otype:delivery']]])
+  })
+}
+
+// ---------- Мои брони (просмотр / отмена с причиной) ----------
+
+async function showMyBookings(chatId, session) {
+  const venueId = defaultVenueId()
+  const bookings = venueId ? repo.listBotBookings(chatId, venueId) : []
+  if (bookings.length === 0) {
+    await sendMessage(chatId, tr(session, 'noMyBookings'))
+    return
+  }
+  const rows = bookings.map((b) => [[`${formatShortDateTime(b.date_from)} — ${b.table_name || '—'}`, `mybooking:${b.id}`]])
+  await sendMessage(chatId, tr(session, 'myBookingsTitle'), { reply_markup: inlineKb(rows) })
+}
+
+async function showMyBookingDetail(chatId, session, bookingId, callbackId) {
+  const venueId = defaultVenueId()
+  const booking = repo.listBotBookings(chatId, venueId).find((b) => b.id === bookingId)
+  await answerCallback(callbackId)
+  if (!booking) {
+    await sendMessage(chatId, tr(session, 'orderHistoryItemGone'))
+    return
+  }
+  await sendMessage(
+    chatId,
+    tr(session, 'myBookingDetail', { table: booking.table_name || '—', time: formatShortDateTime(booking.date_from) }),
+    {
+      reply_markup: inlineKb([
+        [[tr(session, 'btnCancelBooking'), `cancelbooking:${booking.id}`]],
+        [[tr(session, 'btnBackToList'), 'mybookings:list']]
+      ])
+    }
+  )
+}
+
+async function askCancelReason(chatId, session, bookingId, callbackId) {
+  session.step = 'booking_cancel_reason'
+  session.cancelBookingId = bookingId
+  await answerCallback(callbackId)
+  await sendMessage(chatId, tr(session, 'cancelReasonPrompt'), {
+    reply_markup: inlineKb([[[tr(session, 'btnSkipReason'), 'cancelreason:skip']]])
+  })
+}
+
+async function notifyStaffBookingCancelled(booking, reason) {
+  const venueId = defaultVenueId()
+  const settings = venueId ? repo.getBotSettings(venueId) : null
+  if (!settings?.notify_chat_id || !settings.notify_new_booking) return
+  const reasonSuffix = reason ? t('ru', 'staffBookingCancelledReasonSuffix', { reason }) : ''
+  await sendMessage(
+    settings.notify_chat_id,
+    t('ru', 'staffBookingCancelled', {
+      table: booking.table_name || '—',
+      time: formatTimeLabel(booking.date_from),
+      name: booking.client_name || '—',
+      contact: booking.client_contact || '—',
+      reasonSuffix
+    }),
+    { reply_markup: { inline_keyboard: [contactClientRow(booking.client_contact, booking.bot_chat_id)] } }
+  ).catch((e) => console.error('[rovena-bot] staff notify failed', e))
+}
+
+async function finalizeCancelBooking(chatId, session, reason) {
+  const bookingId = session.cancelBookingId
+  if (!bookingId) {
+    await showMainMenu(chatId, session)
+    return
+  }
+  const cleanReason = reason || null
+  const booking = repo.updateBooking(bookingId, { status: 'cancelled', comment: cleanReason }, 'bot')
+  session.cancelBookingId = null
+  await sendMessage(chatId, tr(session, 'bookingCancelledByGuest', { time: formatTimeLabel(booking.date_from) }))
+  await notifyStaffBookingCancelled(booking, cleanReason)
+  await showMainMenu(chatId, session)
 }
 
 // ---------- Выбор стола ----------
@@ -362,6 +498,38 @@ async function handleCustomTime(chatId, session, text) {
   const arrival = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm)
   if (arrival < now) arrival.setDate(arrival.getDate() + 1)
   session.arrivalIso = arrival.toISOString()
+  await proceedAfterTimeChosen(chatId, session)
+}
+
+/**
+ * Проверка брони: занят ли выбранный стол на выбранное время (или прямо
+ * сейчас, если гость выбрал «Сейчас»). Для доставки/брони без стола не нужна.
+ */
+async function checkTableConflict(session) {
+  if (session.orderMode === 'delivery' || !session.tableId) return null
+  if (session.arrivalIso) {
+    return repo.findBookingConflict(session.tableId, session.arrivalIso)
+  }
+  const venueId = defaultVenueId()
+  const statuses = repo.tableStatuses(venueId)
+  const tb = statuses.find((t) => t.id === session.tableId)
+  return tb && tb.status === 'occupied' ? { conflictNow: true } : null
+}
+
+async function proceedAfterTimeChosen(chatId, session) {
+  const conflict = await checkTableConflict(session)
+  if (conflict) {
+    const message = conflict.conflictNow
+      ? tr(session, 'tableConflictNowMessage')
+      : tr(session, 'tableConflictMessage', { time: formatTimeLabel(conflict.date_from) })
+    await sendMessage(chatId, message, {
+      reply_markup: inlineKb([
+        [[tr(session, 'btnPickAnotherTime'), 'conflict:time']],
+        [[tr(session, 'btnPickAnotherTable'), 'conflict:table']]
+      ])
+    })
+    return
+  }
   await showConfirm(chatId, session)
 }
 
@@ -409,7 +577,8 @@ async function notifyStaffNewBooking(booking) {
       time: formatTimeLabel(booking.date_from),
       name: booking.client_name || '—',
       contact: booking.client_contact || '—'
-    })
+    }),
+    { reply_markup: { inline_keyboard: [contactClientRow(booking.client_contact, booking.bot_chat_id)] } }
   ).catch((e) => console.error('[rovena-bot] staff notify failed', e))
 }
 
@@ -419,7 +588,8 @@ async function notifyStaffNewOrder(order, name, contact) {
   if (!settings?.notify_chat_id || !settings.notify_new_order) return
   await sendMessage(
     settings.notify_chat_id,
-    t('ru', 'staffNewOrder', { id: order.id, total: formatMoney(order.total_amount), name: name || '—', contact: contact || '—' })
+    t('ru', 'staffNewOrder', { id: order.id, total: formatMoney(order.total_amount), name: name || '—', contact: contact || '—' }),
+    { reply_markup: { inline_keyboard: [contactClientRow(contact, order.bot_chat_id)] } }
   ).catch((e) => console.error('[rovena-bot] staff notify failed', e))
 }
 
@@ -519,6 +689,14 @@ async function tryHandleQuickButton(chatId, session, text) {
     await showMenuReadonly(chatId, session)
     return true
   }
+  if (text === tr(session, 'btnHistory')) {
+    await showOrderHistory(chatId, session)
+    return true
+  }
+  if (text === tr(session, 'btnMyBookings')) {
+    await showMyBookings(chatId, session)
+    return true
+  }
   if (text === tr(session, 'btnRegister')) {
     await startRegistration(chatId, session)
     return true
@@ -560,6 +738,13 @@ async function handleMessage(msg) {
     await finishRegistration(chatId, session, msg.contact.phone_number)
     return
   }
+  if (msg.location && session.step === 'order_delivery_address') {
+    const { latitude, longitude } = msg.location
+    session.deliveryAddress = `📍 https://maps.google.com/?q=${latitude},${longitude}`
+    await sendMessage(chatId, tr(session, 'locationReceived'))
+    await openMenuBrowsing(chatId, session)
+    return
+  }
   if (!text) return
 
   if (session.step !== 'lang' && session.step !== 'reg_name' && session.step !== 'reg_phone') {
@@ -580,6 +765,9 @@ async function handleMessage(msg) {
       return
     case 'order_time_custom':
       await handleCustomTime(chatId, session, text)
+      return
+    case 'booking_cancel_reason':
+      await finalizeCancelBooking(chatId, session, text)
       return
     default:
       await sendMessage(chatId, tr(session, 'unknownCommand'))
@@ -619,7 +807,13 @@ async function handleCallback(cb) {
       await showTablePicker(chatId, session)
     } else {
       session.step = 'order_delivery_address'
-      await sendMessage(chatId, tr(session, 'askDeliveryAddress'))
+      await sendMessage(chatId, tr(session, 'askDeliveryAddress'), {
+        reply_markup: {
+          keyboard: [[{ text: tr(session, 'btnShareLocation'), request_location: true }]],
+          resize_keyboard: true,
+          one_time_keyboard: true
+        }
+      })
     }
     return
   }
@@ -686,7 +880,14 @@ async function handleCallback(cb) {
       return
     }
     session.arrivalIso = value === 'now' ? null : new Date(Date.now() + Number(value) * 60000).toISOString()
-    await showConfirm(chatId, session)
+    await proceedAfterTimeChosen(chatId, session)
+    return
+  }
+
+  if (prefix === 'conflict') {
+    await answerCallback(cb.id)
+    if (value === 'time') await promptTime(chatId, session)
+    else await showTablePicker(chatId, session)
     return
   }
 
@@ -698,6 +899,33 @@ async function handleCallback(cb) {
       await sendMessage(chatId, tr(session, 'cancelled'))
       await showMainMenu(chatId, session)
     }
+    return
+  }
+
+  if (prefix === 'repeat') {
+    await repeatOrder(chatId, session, Number(value), cb.id)
+    return
+  }
+
+  if (prefix === 'mybookings') {
+    await answerCallback(cb.id)
+    await showMyBookings(chatId, session)
+    return
+  }
+
+  if (prefix === 'mybooking') {
+    await showMyBookingDetail(chatId, session, Number(value), cb.id)
+    return
+  }
+
+  if (prefix === 'cancelbooking') {
+    await askCancelReason(chatId, session, Number(value), cb.id)
+    return
+  }
+
+  if (prefix === 'cancelreason') {
+    await answerCallback(cb.id)
+    await finalizeCancelBooking(chatId, session, null)
     return
   }
 
