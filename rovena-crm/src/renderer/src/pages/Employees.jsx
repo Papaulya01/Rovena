@@ -51,26 +51,14 @@ function employeeColor(id) {
   return EMPLOYEE_COLORS[id % EMPLOYEE_COLORS.length]
 }
 
+// У официанта нет доступа в CRM/Staff вообще — только кассир открывает смену
+// и работает в системе, официанты просто пользуются (по прямому указанию
+// пользователя 30.08.2026). Поэтому "waiter" здесь сознательно отсутствует.
 const POSITION_TO_ROLE = {
   cashier: 'cashier',
-  waiter: 'cashier',
   warehouse: 'warehouse',
   accountant: 'accountant',
   other: 'cashier'
-}
-
-function transliterate(str) {
-  const map = {
-    а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i',
-    й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't',
-    у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '',
-    э: 'e', ю: 'yu', я: 'ya', ' ': '.'
-  }
-  return str
-    .toLowerCase()
-    .split('')
-    .map((ch) => (ch in map ? map[ch] : /[a-z0-9.]/.test(ch) ? ch : ''))
-    .join('')
 }
 
 function AccessModal({ employee, users, linkedUserIds, venueId, onClose, onChanged }) {
@@ -86,7 +74,7 @@ function AccessModal({ employee, users, linkedUserIds, venueId, onClose, onChang
 
   const [linkUserId, setLinkUserId] = useState('')
   const [creating, setCreating] = useState(false)
-  const [username, setUsername] = useState(transliterate(employee.full_name))
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState(POSITION_TO_ROLE[employee.position] || 'cashier')
   const [busy, setBusy] = useState(false)
@@ -505,14 +493,20 @@ export default function Employees() {
                       </span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className={`badge access-badge ${linkedUser ? 'status-confirmed' : 'status-cancelled'}`}
-                        onClick={() => setAccessModalEmployee(emp)}
-                        title={t('employees.accessManage')}
-                      >
-                        {linkedUser ? linkedUser.username : t('employees.noAccess')}
-                      </button>
+                      {emp.position === 'waiter' ? (
+                        <span className="badge" title={t('employees.accessNotNeededHint')}>
+                          {t('employees.accessNotNeeded')}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className={`badge access-badge ${linkedUser ? 'status-confirmed' : 'status-cancelled'}`}
+                          onClick={() => setAccessModalEmployee(emp)}
+                          title={t('employees.accessManage')}
+                        >
+                          {linkedUser ? linkedUser.username : t('employees.noAccess')}
+                        </button>
+                      )}
                     </td>
                     <td style={{ display: 'flex', gap: 8 }}>
                       <button className="btn secondary" onClick={() => toggleActive(emp)}>

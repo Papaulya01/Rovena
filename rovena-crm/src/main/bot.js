@@ -150,9 +150,14 @@ function mainMenuKeyboard(session) {
     [tr(session, 'btnOrder'), tr(session, 'btnBook')],
     [tr(session, 'btnTables'), tr(session, 'btnMenu')],
     [tr(session, 'btnHistory'), tr(session, 'btnMyBookings')],
-    [tr(session, 'btnRegister'), tr(session, 'btnLang')],
-    [tr(session, 'btnHelp')]
+    [tr(session, 'btnMyDeliveries'), tr(session, 'btnRegister')],
+    [tr(session, 'btnLang'), tr(session, 'btnHelp')]
   ])
+}
+
+function orderStatusLabel(session, status) {
+  const key = status === 'processing' ? 'orderStatusProcessing' : status === 'done' ? 'orderStatusDone' : status === 'cancelled' ? 'orderStatusCancelled' : 'orderStatusNew'
+  return tr(session, key)
 }
 
 async function showMainMenu(chatId, session) {
@@ -376,6 +381,66 @@ async function finalizeCancelBooking(chatId, session, reason) {
   await sendMessage(chatId, tr(session, 'bookingCancelledByGuest', { time: formatTimeLabel(booking.date_from) }))
   await notifyStaffBookingCancelled(booking, cleanReason)
   await showMainMenu(chatId, session)
+}
+
+// ---------- Мои доставки (история + активные, отмена пока не подтверждена персоналом) ----------
+
+async function showMyDeliveries(chatId, session) {
+  const venueId = defaultVenueId()
+  const orders = venueId ? repo.listBotDeliveryOrders(chatId, venueId) : []
+  if (orders.length === 0) {
+    await sendMessage(chatId, tr(session, 'noMyDeliveries'))
+    return
+  }
+  const rows = orders.map((o) => [
+    [`${formatShortDateTime(o.created_at)} — ${formatMoney(o.total_amount)} (${orderStatusLabel(session, o.status)})`, `mydelivery:${o.id}`]
+  ])
+  await sendMessage(chatId, tr(session, 'myDeliveriesTitle'), { reply_markup: inlineKb(rows) })
+}
+
+async function showMyDeliveryDetail(chatId, session, orderId, callbackId) {
+  const venueId = defaultVenueId()
+  const order = repo.listBotDeliveryOrders(chatId, venueId).find((o) => o.id === orderId)
+  await answerCallback(callbackId)
+  if (!order) {
+    await sendMessage(chatId, tr(session, 'orderHistoryItemGone'))
+    return
+  }
+  const items = order.items.map((i) => `${i.name} ×${i.qty}`).join(', ')
+  const text = tr(session, 'myDeliveryDetail', {
+    address: order.delivery_address || '—',
+    items,
+    total: formatMoney(order.total_amount),
+    status: orderStatusLabel(session, order.status)
+  })
+  const rows = []
+  if (order.status === 'new') rows.push([[tr(session, 'btnCancelOrder'), `cancelorder:${order.id}`]])
+  rows.push([[tr(session, 'btnBackToList'), 'mydeliveries:list']])
+  await sendMessage(chatId, text, { reply_markup: inlineKb(rows) })
+}
+
+async function notifyStaffOrderCancelled(order) {
+  const venueId = defaultVenueId()
+  const settings = venueId ? repo.getBotSettings(venueId) : null
+  if (!settings?.notify_chat_id || !settings.notify_new_order) return
+  await sendMessage(
+    settings.notify_chat_id,
+    t('ru', 'staffOrderCancelledByGuest', { id: order.id, total: formatMoney(order.total_amount), name: order.client_name || '—', contact: order.client_contact || '—' }),
+    { reply_markup: { inline_keyboard: [contactClientRow(order.client_contact, order.bot_chat_id)] } }
+  ).catch((e) => console.error('[rovena-bot] staff notify failed', e))
+}
+
+async function cancelDeliveryOrder(chatId, session, orderId, callbackId) {
+  const venueId = defaultVenueId()
+  const order = repo.listBotDeliveryOrders(chatId, venueId).find((o) => o.id === orderId)
+  if (!order || order.status !== 'new') {
+    await answerCallback(callbackId, tr(session, 'orderCancelNotAllowed'))
+    return
+  }
+  const updated = repo.updateOrder(order.id, { status: 'cancelled' }, 'bot')
+  await answerCallback(callbackId)
+  await sendMessage(chatId, tr(session, 'orderCancelledByGuest', { id: updated.id }))
+  await notifyStaffOrderCancelled(updated)
 }
 
 // ---------- Выбор стола ----------
@@ -697,6 +762,10 @@ async function tryHandleQuickButton(chatId, session, text) {
     await showMyBookings(chatId, session)
     return true
   }
+  if (text === tr(session, 'btnMyDeliveries')) {
+    await showMyDeliveries(chatId, session)
+    return true
+  }
   if (text === tr(session, 'btnRegister')) {
     await startRegistration(chatId, session)
     return true
@@ -747,7 +816,12 @@ async function handleMessage(msg) {
   }
   if (!text) return
 
-  if (session.step !== 'lang' && session.step !== 'reg_name' && session.step !== 'reg_phone') {
+  // "lang" сознательно НЕ исключён здесь (был баг): если гость нажал "🌐 Язык",
+  // это открывает инлайн-выбор языка отдельным сообщением, но старая клавиатура
+  // снизу экрана никуда не девается — если гость вместо инлайн-кнопки нажмёт
+  // старую кнопку меню, бот должен её выполнить, а не зависнуть в шаге "lang"
+  // навсегда, отвечая "не понял" на любое следующее нажатие.
+  if (session.step !== 'reg_name' && session.step !== 'reg_phone') {
     if (await tryHandleQuickButton(chatId, session, text)) return
   }
 
@@ -929,6 +1003,22 @@ async function handleCallback(cb) {
     return
   }
 
+  if (prefix === 'mydeliveries') {
+    await answerCallback(cb.id)
+    await showMyDeliveries(chatId, session)
+    return
+  }
+
+  if (prefix === 'mydelivery') {
+    await showMyDeliveryDetail(chatId, session, Number(value), cb.id)
+    return
+  }
+
+  if (prefix === 'cancelorder') {
+    await cancelDeliveryOrder(chatId, session, Number(value), cb.id)
+    return
+  }
+
   await answerCallback(cb.id)
 }
 
@@ -971,7 +1061,14 @@ export async function notifyOrderStatus(order, status) {
   if (!running || !order?.bot_chat_id) return
   const customer = repo.getBotCustomer(order.bot_chat_id)
   const lang = customer?.language || 'ru'
-  const key = status === 'done' ? 'statusUpdateDone' : status === 'cancelled' ? 'statusUpdateCancelled' : null
+  const key =
+    status === 'done'
+      ? 'statusUpdateDone'
+      : status === 'cancelled'
+        ? 'statusUpdateCancelled'
+        : status === 'processing'
+          ? 'statusUpdateProcessing'
+          : null
   if (!key) return
   await sendMessage(order.bot_chat_id, t(lang, key, { id: order.id })).catch((e) =>
     console.error('[rovena-bot] notifyOrderStatus failed', e)

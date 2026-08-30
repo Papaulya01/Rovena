@@ -100,7 +100,9 @@ export default {
       done: 'Готов',
       cancelled: 'Отменён'
     },
-    bookingNoName: 'без имени'
+    bookingNoName: 'без имени',
+    deliveryLabel: '🚚 Доставка',
+    confirmDelivery: 'Подтвердить'
   },
   common2: {
     id: 'ID',
@@ -269,6 +271,8 @@ export default {
     access: 'Доступ в Staff',
     accessColumn: 'Доступ',
     noAccess: 'Нет доступа',
+    accessNotNeeded: 'Не требуется',
+    accessNotNeededHint: 'У официанта нет доступа в систему — смену открывает и работает в CRM только кассир',
     accessManage: 'Настроить',
     accessModalTitle: 'Доступ в Staff (панель кассира)',
     accessModalHint:

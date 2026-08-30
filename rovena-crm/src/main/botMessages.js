@@ -112,7 +112,20 @@ const ru = {
   btnPickAnotherTable: 'Выбрать другой стол',
   btnContactClient: '📞 Связаться с клиентом',
   staffBookingCancelled: '❌ Гость отменил бронь: {table}, {time}, {name} ({contact}){reasonSuffix}',
-  staffBookingCancelledReasonSuffix: ' — причина: {reason}'
+  staffBookingCancelledReasonSuffix: ' — причина: {reason}',
+  btnMyDeliveries: '🚚 Мои доставки',
+  myDeliveriesTitle: 'Ваши заказы с доставкой — нажмите, чтобы посмотреть:',
+  noMyDeliveries: 'Заказов с доставкой пока не было.',
+  myDeliveryDetail: 'Адрес: {address}\nСостав: {items}\nСумма: {total}\nСтатус: {status}',
+  btnCancelOrder: '✖ Отменить заказ',
+  orderCancelNotAllowed: 'Заказ уже подтверждён персоналом — отменить его через бота больше нельзя, свяжитесь с заведением напрямую.',
+  orderCancelledByGuest: 'Заказ №{id} отменён.',
+  orderStatusNew: 'новый',
+  orderStatusProcessing: 'подтверждён, готовится',
+  orderStatusDone: 'выполнен',
+  orderStatusCancelled: 'отменён',
+  statusUpdateProcessing: 'Ваш заказ №{id} подтверждён и готовится к отправке ✅ Отменить его через бота уже нельзя.',
+  staffOrderCancelledByGuest: '❌ Гость отменил заказ №{id} на {total} — {name} ({contact})'
 }
 
 const uzLatn = {
@@ -223,7 +236,20 @@ const uzLatn = {
   btnPickAnotherTable: 'Boshqa stol tanlash',
   btnContactClient: '📞 Mijoz bilan bog\'lanish',
   staffBookingCancelled: '❌ Mehmon bronni bekor qildi: {table}, {time}, {name} ({contact}){reasonSuffix}',
-  staffBookingCancelledReasonSuffix: ' — sabab: {reason}'
+  staffBookingCancelledReasonSuffix: ' — sabab: {reason}',
+  btnMyDeliveries: '🚚 Yetkazib berishlarim',
+  myDeliveriesTitle: "Yetkazib berish buyurtmalaringiz — ko'rish uchun bosing:",
+  noMyDeliveries: "Hozircha yetkazib berish buyurtmalari bo'lmagan.",
+  myDeliveryDetail: 'Manzil: {address}\nTarkibi: {items}\nSumma: {total}\nHolati: {status}',
+  btnCancelOrder: '✖ Buyurtmani bekor qilish',
+  orderCancelNotAllowed: "Buyurtma xodim tomonidan allaqachon tasdiqlangan — botdan bekor qilib bo'lmaydi, to'g'ridan-to'g'ri muassasa bilan bog'laning.",
+  orderCancelledByGuest: 'Buyurtma №{id} bekor qilindi.',
+  orderStatusNew: 'yangi',
+  orderStatusProcessing: 'tasdiqlangan, tayyorlanmoqda',
+  orderStatusDone: 'bajarildi',
+  orderStatusCancelled: 'bekor qilindi',
+  statusUpdateProcessing: 'Buyurtmangiz №{id} tasdiqlandi va jo\'natishga tayyorlanmoqda ✅ Uni botdan bekor qilib bo\'lmaydi.',
+  staffOrderCancelledByGuest: '❌ Mehmon buyurtma №{id}ni bekor qildi, summasi {total} — {name} ({contact})'
 }
 
 const uzCyrl = {
@@ -334,7 +360,20 @@ const uzCyrl = {
   btnPickAnotherTable: 'Бошқа стол танлаш',
   btnContactClient: '📞 Мижоз билан боғланиш',
   staffBookingCancelled: '❌ Меҳмон бронни бекор қилди: {table}, {time}, {name} ({contact}){reasonSuffix}',
-  staffBookingCancelledReasonSuffix: ' — сабаб: {reason}'
+  staffBookingCancelledReasonSuffix: ' — сабаб: {reason}',
+  btnMyDeliveries: '🚚 Етказиб беришларим',
+  myDeliveriesTitle: 'Етказиб бериш буюртмаларингиз — кўриш учун босинг:',
+  noMyDeliveries: 'Ҳозирча етказиб бериш буюртмалари бўлмаган.',
+  myDeliveryDetail: 'Манзил: {address}\nТаркиби: {items}\nСумма: {total}\nҲолати: {status}',
+  btnCancelOrder: '✖ Буюртмани бекор қилиш',
+  orderCancelNotAllowed: 'Буюртма ходим томонидан аллақачон тасдиқланган — ботдан бекор қилиб бўлмайди, тўғридан-тўғри муассаса билан боғланинг.',
+  orderCancelledByGuest: 'Буюртма №{id} бекор қилинди.',
+  orderStatusNew: 'янги',
+  orderStatusProcessing: 'тасдиқланган, тайёрланмоқда',
+  orderStatusDone: 'бажарилди',
+  orderStatusCancelled: 'бекор қилинди',
+  statusUpdateProcessing: 'Буюртмангиз №{id} тасдиқланди ва жўнатишга тайёрланмоқда ✅ Уни ботдан бекор қилиб бўлмайди.',
+  staffOrderCancelledByGuest: '❌ Меҳмон буюртма №{id}ни бекор қилди, суммаси {total} — {name} ({contact})'
 }
 
 const DICTS = { ru, 'uz-latn': uzLatn, 'uz-cyrl': uzCyrl }

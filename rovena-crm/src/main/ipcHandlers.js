@@ -203,7 +203,7 @@ export function registerIpcHandlers() {
   ipcMain.handle('orders:list', () => repo.listOrders(currentVenueId()))
   ipcMain.handle('orders:update', (_e, { id, ...payload }) => {
     const order = repo.updateOrder(id, payload, currentAuthor())
-    if (payload.status === 'done' || payload.status === 'cancelled') {
+    if (payload.status === 'done' || payload.status === 'cancelled' || payload.status === 'processing') {
       notifyOrderStatus(order, payload.status).catch(() => {})
     }
     return order

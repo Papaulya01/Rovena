@@ -233,6 +233,21 @@ export function listBotOrderHistory(chatId, venueId, limit = 10) {
   return orders.map((o) => ({ ...o, items: itemsStmt.all(o.id) }))
 }
 
+/** Заказы с доставкой этого гостя бота — история и активные вместе (для «Мои доставки»), включая отменённые. */
+export function listBotDeliveryOrders(chatId, venueId, limit = 20) {
+  const db = getDb()
+  const orders = db
+    .prepare(
+      `SELECT * FROM orders
+       WHERE bot_chat_id = ? AND venue_id = ? AND delivery = 1
+       ORDER BY created_at DESC
+       LIMIT ?`
+    )
+    .all(String(chatId), venueId, limit)
+  const itemsStmt = db.prepare(`SELECT * FROM order_items WHERE order_id = ?`)
+  return orders.map((o) => ({ ...o, items: itemsStmt.all(o.id) }))
+}
+
 // ---------- Tables (зал) ----------
 
 export function listTables(venueId, { activeOnly = false } = {}) {

@@ -220,6 +220,11 @@ export default function CashierPanel({ session, onLogout }) {
     loadAll()
   }
 
+  async function confirmDeliveryOrder(id) {
+    await window.rovena.orders.update({ id, status: 'processing' })
+    loadAll()
+  }
+
   if (shift === undefined) return null
   if (!shift) return <OpenShiftScreen onOpened={setShift} />
 
@@ -289,17 +294,30 @@ export default function CashierPanel({ session, onLogout }) {
               {shiftOrders.map((o) => (
                 <div className="shift-order-card" key={o.id}>
                   <div className="shift-order-card-top">
-                    <span className="shift-order-card-table">{o.table_name || t('cashier.noTable')}</span>
+                    <span className="shift-order-card-table">
+                      {o.delivery ? t('cashier.deliveryLabel') : o.table_name || t('cashier.noTable')}
+                    </span>
                     <span className={`badge status-${o.status}`}>
                       {t(`cashier.orderStatuses.${o.status}`)}
                     </span>
                   </div>
+                  {o.delivery === 1 && (
+                    <div className="shift-order-card-delivery">
+                      {o.delivery_address || '—'}
+                      {o.client_contact ? ` · ${o.client_contact}` : ''}
+                    </div>
+                  )}
                   <div className="shift-order-card-items">
                     {o.items.map((i) => `${i.name} ×${i.qty}`).join(', ')}
                   </div>
                   <div className="shift-order-card-bottom">
                     <span className="shift-order-card-total">{formatMoney(o.total_amount)}</span>
                     <div className="shift-order-card-actions">
+                      {o.delivery === 1 && o.status === 'new' && (
+                        <button className="btn secondary" onClick={() => confirmDeliveryOrder(o.id)}>
+                          {t('cashier.confirmDelivery')}
+                        </button>
+                      )}
                       {o.status !== 'done' && o.status !== 'cancelled' && (
                         <button className="btn secondary" onClick={() => markOrderDone(o.id)}>
                           {t('cashier.done')}

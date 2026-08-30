@@ -100,7 +100,9 @@ export default {
       done: 'Тайёр',
       cancelled: 'Бекор қилинган'
     },
-    bookingNoName: 'исмсиз'
+    bookingNoName: 'исмсиз',
+    deliveryLabel: '🚚 Етказиб бериш',
+    confirmDelivery: 'Тасдиқлаш'
   },
   common2: {
     id: 'ID',
@@ -269,6 +271,8 @@ export default {
     access: 'Staff га кириш ҳуқуқи',
     accessColumn: 'Кириш ҳуқуқи',
     noAccess: 'Ҳуқуқ йўқ',
+    accessNotNeeded: 'Керак эмас',
+    accessNotNeededHint: 'Официантда тизимга кириш ҳуқуқи йўқ — сменани очиш ва CRM\'да ишлаш фақат кассирга тегишли',
     accessManage: 'Созлаш',
     accessModalTitle: 'Staff (кассир панели)га кириш ҳуқуқи',
     accessModalHint:
