@@ -3,6 +3,7 @@ import { formatMoney, formatPriceInput, unformatPrice, formatDateTime } from '..
 import Select from '../components/Select.jsx'
 import LiveClock from '../components/LiveClock.jsx'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
+import LanguageButtons from '../components/LanguageButtons.jsx'
 import { buildReceiptHtml } from '../utils/receipt.js'
 import { useI18n } from '../i18n/index.jsx'
 
@@ -29,8 +30,8 @@ function OpenShiftScreen({ onOpened }) {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <LanguageSwitcher className="lang-switcher-login" />
-        <h2 style={{ marginTop: 22 }}>{t('cashier.openShiftTitle')}</h2>
+        <LanguageButtons />
+        <h2>{t('cashier.openShiftTitle')}</h2>
         <p className="auth-sub">{t('cashier.openShiftSubtitle')}</p>
         <form onSubmit={handleOpen}>
           <div style={{ marginBottom: 16 }}>
@@ -278,44 +279,37 @@ export default function CashierPanel({ session, onLogout }) {
           {shiftOrders.length === 0 ? (
             <div className="empty-state">{t('cashier.noOrders')}</div>
           ) : (
-            <div className="card">
-              <table>
-                <thead>
-                  <tr>
-                    <th>{t('cashier.table')}</th>
-                    <th>{t('cashier.items')}</th>
-                    <th>{t('cashier.total')}</th>
-                    <th>{t('cashier.status')}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shiftOrders.map((o) => (
-                    <tr key={o.id}>
-                      <td>{o.table_name || '—'}</td>
-                      <td>{o.items.map((i) => `${i.name} ×${i.qty}`).join(', ')}</td>
-                      <td>{formatMoney(o.total_amount)}</td>
-                      <td>
-                        <span className={`badge status-${o.status}`}>{o.status}</span>
-                      </td>
-                      <td style={{ display: 'flex', gap: 8 }}>
-                        {o.status !== 'done' && o.status !== 'cancelled' && (
-                          <button className="btn secondary" onClick={() => markOrderDone(o.id)}>
-                            {t('cashier.done')}
-                          </button>
-                        )}
-                        <button
-                          className="btn secondary"
-                          disabled={printingId === o.id}
-                          onClick={() => printReceipt(o)}
-                        >
-                          {printingId === o.id ? t('cashier.printing') : t('cashier.receipt')}
+            <div className="shift-order-list">
+              {shiftOrders.map((o) => (
+                <div className="shift-order-card" key={o.id}>
+                  <div className="shift-order-card-top">
+                    <span className="shift-order-card-table">{o.table_name || t('cashier.noTable')}</span>
+                    <span className={`badge status-${o.status}`}>
+                      {t(`cashier.orderStatuses.${o.status}`)}
+                    </span>
+                  </div>
+                  <div className="shift-order-card-items">
+                    {o.items.map((i) => `${i.name} ×${i.qty}`).join(', ')}
+                  </div>
+                  <div className="shift-order-card-bottom">
+                    <span className="shift-order-card-total">{formatMoney(o.total_amount)}</span>
+                    <div className="shift-order-card-actions">
+                      {o.status !== 'done' && o.status !== 'cancelled' && (
+                        <button className="btn secondary" onClick={() => markOrderDone(o.id)}>
+                          {t('cashier.done')}
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      )}
+                      <button
+                        className="btn secondary"
+                        disabled={printingId === o.id}
+                        onClick={() => printReceipt(o)}
+                      >
+                        {printingId === o.id ? t('cashier.printing') : t('cashier.receipt')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>

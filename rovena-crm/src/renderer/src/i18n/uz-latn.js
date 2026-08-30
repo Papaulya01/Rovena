@@ -92,7 +92,14 @@ export default {
     orderTotal: 'Jami',
     submitOrder: 'Buyurtmani rasmiylashtirish',
     submitting: 'Rasmiylashtirilmoqda...',
-    peopleShort: 'kishi'
+    peopleShort: 'kishi',
+    orderStatuses: {
+      new: 'Yangi',
+      processing: "Tayyorlanmoqda",
+      confirmed: 'Tasdiqlangan',
+      done: 'Tayyor',
+      cancelled: 'Bekor qilingan'
+    }
   },
   common2: {
     id: 'ID',
@@ -255,7 +262,28 @@ export default {
       'yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
       'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'
     ],
-    weekdaysShort: ['Du', 'Se', 'Cho', 'Pa', 'Ju', 'Sha', 'Ya']
+    weekdaysShort: ['Du', 'Se', 'Cho', 'Pa', 'Ju', 'Sha', 'Ya'],
+    access: 'Staff ga kirish huquqi',
+    accessColumn: 'Kirish huquqi',
+    noAccess: "Huquq yo'q",
+    accessManage: 'Sozlash',
+    accessModalTitle: 'Staff (kassir paneli) ga kirish huquqi',
+    accessModalHint:
+      "Xodim Staff (kassir paneli)ga kirishi uchun unda \"Kassir\" (yoki lavozimga mos boshqa rol) roli bilan CRM login bo'lishi kerak. Bu yerda yangi login yaratishingiz yoki mavjudini biriktirishingiz mumkin.",
+    accessCurrent: 'Joriy login',
+    accessUnlink: 'Uzish',
+    accessLinkExisting: "Mavjud loginni biriktirish",
+    accessLinkButton: 'Biriktirish',
+    accessNoFreeUsers: "Xodimga biriktirilmagan bo'sh login yo'q — quyida yangisini yarating",
+    accessCreateNew: 'Yangi login yaratish',
+    accessUsername: 'Login',
+    accessPassword: 'Parol',
+    accessPasswordHint: 'kamida 6 belgi',
+    accessRole: 'CRM dagi rol',
+    accessCreateButton: 'Yaratish va biriktirish',
+    accessCreating: 'Yaratilmoqda...',
+    accessError: "Muvaffaqiyatsiz — login/parolni tekshiring (login band bo'lishi mumkin)",
+    accessClose: 'Yopish'
   },
   financeLedger: {
     title: 'Buxgalteriya',

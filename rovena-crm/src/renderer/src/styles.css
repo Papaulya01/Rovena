@@ -305,6 +305,16 @@ tr:last-child td {
   color: var(--expense);
 }
 
+.access-badge {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.access-badge:hover {
+  opacity: 0.8;
+}
+
 .btn {
   font-family: var(--font-body);
   font-size: 13px;
@@ -1086,6 +1096,62 @@ input[type='radio']:disabled {
   border-radius: 6px;
   object-fit: cover;
   flex-shrink: 0;
+}
+
+/* ---------- Заказы этой смены (карточки, а не таблица — не ломается на узких мониторах) ---------- */
+
+.shift-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shift-order-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 10px 14px;
+}
+
+.shift-order-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13.5px;
+  margin-bottom: 4px;
+}
+
+.shift-order-card-items {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.shift-order-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.shift-order-card-total {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.shift-order-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.shift-order-card-actions .btn {
+  flex: 1;
 }
 
 /* ---------- Категории меню (список слева) ---------- */

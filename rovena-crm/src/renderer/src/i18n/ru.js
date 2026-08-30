@@ -92,7 +92,14 @@ export default {
     orderTotal: 'Итого',
     submitOrder: 'Пробить заказ',
     submitting: 'Пробиваем...',
-    peopleShort: 'чел.'
+    peopleShort: 'чел.',
+    orderStatuses: {
+      new: 'Новый',
+      processing: 'Готовится',
+      confirmed: 'Подтверждён',
+      done: 'Готов',
+      cancelled: 'Отменён'
+    }
   },
   common2: {
     id: 'ID',
@@ -255,7 +262,28 @@ export default {
       'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
       'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
     ],
-    weekdaysShort: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+    weekdaysShort: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+    access: 'Доступ в Staff',
+    accessColumn: 'Доступ',
+    noAccess: 'Нет доступа',
+    accessManage: 'Настроить',
+    accessModalTitle: 'Доступ в Staff (панель кассира)',
+    accessModalHint:
+      'Чтобы сотрудник мог войти в панель кассира (Staff), у него должен быть логин CRM с ролью «Кассир» (или другой ролью по должности). Здесь можно создать новый логин или привязать уже существующий.',
+    accessCurrent: 'Текущий логин',
+    accessUnlink: 'Отвязать',
+    accessLinkExisting: 'Привязать существующий логин',
+    accessLinkButton: 'Привязать',
+    accessNoFreeUsers: 'Нет свободных логинов без сотрудника — создайте новый ниже',
+    accessCreateNew: 'Создать новый логин',
+    accessUsername: 'Логин',
+    accessPassword: 'Пароль',
+    accessPasswordHint: 'минимум 6 символов',
+    accessRole: 'Роль в CRM',
+    accessCreateButton: 'Создать и привязать',
+    accessCreating: 'Создаём...',
+    accessError: 'Не получилось — проверьте логин/пароль (логин уже может быть занят)',
+    accessClose: 'Закрыть'
   },
   financeLedger: {
     title: 'Бухгалтерия',

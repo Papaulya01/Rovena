@@ -92,7 +92,14 @@ export default {
     orderTotal: 'Жами',
     submitOrder: 'Буюртмани расмийлаштириш',
     submitting: 'Расмийлаштирилмоқда...',
-    peopleShort: 'киши'
+    peopleShort: 'киши',
+    orderStatuses: {
+      new: 'Янги',
+      processing: 'Тайёрланмоқда',
+      confirmed: 'Тасдиқланган',
+      done: 'Тайёр',
+      cancelled: 'Бекор қилинган'
+    }
   },
   common2: {
     id: 'ID',
@@ -255,7 +262,28 @@ export default {
       'январь', 'феврал', 'март', 'апрель', 'май', 'июнь',
       'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'
     ],
-    weekdaysShort: ['Ду', 'Се', 'Чо', 'Па', 'Жу', 'Ша', 'Як']
+    weekdaysShort: ['Ду', 'Се', 'Чо', 'Па', 'Жу', 'Ша', 'Як'],
+    access: 'Staff га кириш ҳуқуқи',
+    accessColumn: 'Кириш ҳуқуқи',
+    noAccess: 'Ҳуқуқ йўқ',
+    accessManage: 'Созлаш',
+    accessModalTitle: 'Staff (кассир панели)га кириш ҳуқуқи',
+    accessModalHint:
+      'Ходим Staff (кассир панели)га кириши учун унда «Кассир» (ёки лавозимга мос бошқа рол) роли билан CRM login бўлиши керак. Бу ерда янги login яратишингиз ёки мавжудини бириктиришингиз мумкин.',
+    accessCurrent: 'Жорий login',
+    accessUnlink: 'Узиш',
+    accessLinkExisting: 'Мавжуд loginни бириктириш',
+    accessLinkButton: 'Бириктириш',
+    accessNoFreeUsers: 'Ходимга бириктирилмаган бўш login йўқ — қуйида янгисини яратинг',
+    accessCreateNew: 'Янги login яратиш',
+    accessUsername: 'Login',
+    accessPassword: 'Парол',
+    accessPasswordHint: 'камида 6 белги',
+    accessRole: 'CRM даги рол',
+    accessCreateButton: 'Яратиш ва бириктириш',
+    accessCreating: 'Яратилмоқда...',
+    accessError: "Муваффақиятсиз — login/паролни текширинг (login банд бўлиши мумкин)",
+    accessClose: 'Ёпиш'
   },
   financeLedger: {
     title: 'Бухгалтерия',

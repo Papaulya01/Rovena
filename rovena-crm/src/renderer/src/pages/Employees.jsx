@@ -51,6 +51,179 @@ function employeeColor(id) {
   return EMPLOYEE_COLORS[id % EMPLOYEE_COLORS.length]
 }
 
+const POSITION_TO_ROLE = {
+  cashier: 'cashier',
+  waiter: 'cashier',
+  warehouse: 'warehouse',
+  accountant: 'accountant',
+  other: 'cashier'
+}
+
+function transliterate(str) {
+  const map = {
+    а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i',
+    й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't',
+    у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '',
+    э: 'e', ю: 'yu', я: 'ya', ' ': '.'
+  }
+  return str
+    .toLowerCase()
+    .split('')
+    .map((ch) => (ch in map ? map[ch] : /[a-z0-9.]/.test(ch) ? ch : ''))
+    .join('')
+}
+
+function AccessModal({ employee, users, linkedUserIds, venueId, onClose, onChanged }) {
+  const { t } = useI18n()
+  const ROLES = [
+    { value: 'cashier', label: t('venues.roleCashier') },
+    { value: 'accountant', label: t('venues.roleAccountant') },
+    { value: 'warehouse', label: t('venues.roleWarehouse') },
+    { value: 'admin', label: t('venues.roleAdmin') }
+  ]
+  const linkedUser = users.find((u) => u.id === employee.user_id)
+  const freeUsers = users.filter((u) => !linkedUserIds.has(u.id))
+
+  const [linkUserId, setLinkUserId] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [username, setUsername] = useState(transliterate(employee.full_name))
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState(POSITION_TO_ROLE[employee.position] || 'cashier')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleUnlink() {
+    setBusy(true)
+    await window.rovena.employees.update({ id: employee.id, user_id: null })
+    setBusy(false)
+    onChanged()
+  }
+
+  async function handleLink(e) {
+    e.preventDefault()
+    if (!linkUserId) return
+    setBusy(true)
+    await window.rovena.employees.update({ id: employee.id, user_id: Number(linkUserId) })
+    setBusy(false)
+    onChanged()
+  }
+
+  async function handleCreate(e) {
+    e.preventDefault()
+    setError('')
+    if (!username || password.length < 6) {
+      setError(t('venues.userValidationError'))
+      return
+    }
+    setBusy(true)
+    try {
+      const user = await window.rovena.auth.createUser({
+        username,
+        password,
+        displayName: employee.full_name,
+        role,
+        venueIds: [venueId]
+      })
+      await window.rovena.employees.update({ id: employee.id, user_id: user.id })
+      onChanged()
+    } catch {
+      setError(t('employees.accessError'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="card" style={{ maxWidth: 440, width: '100%' }} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ marginTop: 0 }}>{t('employees.accessModalTitle')}</h3>
+        <p className="auth-sub" style={{ marginBottom: 16 }}>
+          {t('employees.accessModalHint')}
+        </p>
+
+        {linkedUser ? (
+          <div className="server-panel" style={{ marginBottom: 16 }}>
+            <div className="address-row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+              <span>{t('employees.accessCurrent')}</span>
+              <strong>
+                {linkedUser.username} · {ROLES.find((r) => r.value === linkedUser.role)?.label || linkedUser.role}
+              </strong>
+            </div>
+            <button className="btn secondary" type="button" onClick={handleUnlink} disabled={busy}>
+              {t('employees.accessUnlink')}
+            </button>
+          </div>
+        ) : (
+          <>
+            {freeUsers.length > 0 && (
+              <form onSubmit={handleLink} className="server-panel" style={{ marginBottom: 16 }}>
+                <label>{t('employees.accessLinkExisting')}</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <Select
+                      value={linkUserId}
+                      onChange={setLinkUserId}
+                      placeholder={t('employees.choose')}
+                      options={freeUsers.map((u) => ({
+                        value: String(u.id),
+                        label: `${u.username} · ${ROLES.find((r) => r.value === u.role)?.label || u.role}`
+                      }))}
+                    />
+                  </div>
+                  <button className="btn secondary" type="submit" disabled={busy || !linkUserId}>
+                    {t('employees.accessLinkButton')}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {!creating ? (
+              <button className="btn" type="button" style={{ width: '100%' }} onClick={() => setCreating(true)}>
+                {t('employees.accessCreateNew')}
+              </button>
+            ) : (
+              <form onSubmit={handleCreate}>
+                <div className="form-row">
+                  <div>
+                    <label>{t('employees.accessUsername')}</label>
+                    <input value={username} onChange={(e) => setUsername(e.target.value)} />
+                  </div>
+                  <div>
+                    <label>{t('employees.accessRole')}</label>
+                    <Select value={role} onChange={setRole} options={ROLES} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label>{t('employees.accessPassword')}</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t('employees.accessPasswordHint')}
+                  />
+                </div>
+                {error && <div className="auth-error">{error}</div>}
+                <button className="btn" type="submit" disabled={busy} style={{ width: '100%' }}>
+                  {busy ? t('employees.accessCreating') : t('employees.accessCreateButton')}
+                </button>
+              </form>
+            )}
+          </>
+        )}
+
+        <button
+          className="btn secondary"
+          type="button"
+          onClick={onClose}
+          style={{ width: '100%', marginTop: 16 }}
+        >
+          {t('employees.accessClose')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ShiftModal({ date, entry, employees, onClose, onSaved, onDeleted }) {
   const { t } = useI18n()
   const [employeeId, setEmployeeId] = useState(entry ? String(entry.employee_id) : '')
@@ -167,10 +340,18 @@ export default function Employees() {
   const [employeeForm, setEmployeeForm] = useState(EMPTY_EMPLOYEE)
   const [viewDate, setViewDate] = useState(() => startOfMonth(new Date()))
   const [shiftModal, setShiftModal] = useState(null) // { date: 'YYYY-MM-DD', entry: entry|null }
+  const [users, setUsers] = useState([])
+  const [venueId, setVenueId] = useState(null)
+  const [accessModalEmployee, setAccessModalEmployee] = useState(null)
 
   const monthCells = useMemo(() => buildMonthCells(viewDate), [viewDate])
+  const linkedUserIds = useMemo(
+    () => new Set(employees.map((e) => e.user_id).filter(Boolean)),
+    [employees]
+  )
 
   const loadEmployees = () => window.rovena.employees.list().then(setEmployees)
+  const loadUsers = () => window.rovena.auth.listUsers().then(setUsers)
   const reloadSchedule = () => {
     const from = toISODate(monthCells[0])
     const to = toISODate(monthCells[monthCells.length - 1])
@@ -179,6 +360,8 @@ export default function Employees() {
 
   useEffect(() => {
     loadEmployees()
+    loadUsers()
+    window.rovena.auth.me().then((session) => setVenueId(session?.currentVenueId ?? null))
   }, [])
 
   useEffect(() => {
@@ -298,36 +481,50 @@ export default function Employees() {
                 <th>{t('common2.phone')}</th>
                 <th>{t('employees.payment')}</th>
                 <th>{t('cashier.status')}</th>
+                <th>{t('employees.accessColumn')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {employees.map((emp) => (
-                <tr key={emp.id}>
-                  <td>
-                    <span className="calendar-legend-dot" style={{ background: employeeColor(emp.id) }} />
-                    {emp.full_name}
-                  </td>
-                  <td>{positionLabel(emp.position)}</td>
-                  <td>{emp.phone || '—'}</td>
-                  <td>
-                    {SALARY_TYPES.find((s) => s.value === emp.salary_type)?.label} · {formatMoney(emp.salary_rate)}
-                  </td>
-                  <td>
-                    <span className={`badge ${emp.is_active ? 'status-confirmed' : 'status-cancelled'}`}>
-                      {emp.is_active ? t('common.active') : t('common.hidden')}
-                    </span>
-                  </td>
-                  <td style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn secondary" onClick={() => toggleActive(emp)}>
-                      {emp.is_active ? t('common.hide') : t('common.show')}
-                    </button>
-                    <button className="btn secondary" onClick={() => removeEmployee(emp.id)}>
-                      {t('common.delete')}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {employees.map((emp) => {
+                const linkedUser = users.find((u) => u.id === emp.user_id)
+                return (
+                  <tr key={emp.id}>
+                    <td>
+                      <span className="calendar-legend-dot" style={{ background: employeeColor(emp.id) }} />
+                      {emp.full_name}
+                    </td>
+                    <td>{positionLabel(emp.position)}</td>
+                    <td>{emp.phone || '—'}</td>
+                    <td>
+                      {SALARY_TYPES.find((s) => s.value === emp.salary_type)?.label} · {formatMoney(emp.salary_rate)}
+                    </td>
+                    <td>
+                      <span className={`badge ${emp.is_active ? 'status-confirmed' : 'status-cancelled'}`}>
+                        {emp.is_active ? t('common.active') : t('common.hidden')}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`badge access-badge ${linkedUser ? 'status-confirmed' : 'status-cancelled'}`}
+                        onClick={() => setAccessModalEmployee(emp)}
+                        title={t('employees.accessManage')}
+                      >
+                        {linkedUser ? linkedUser.username : t('employees.noAccess')}
+                      </button>
+                    </td>
+                    <td style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn secondary" onClick={() => toggleActive(emp)}>
+                        {emp.is_active ? t('common.hide') : t('common.show')}
+                      </button>
+                      <button className="btn secondary" onClick={() => removeEmployee(emp.id)}>
+                        {t('common.delete')}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
@@ -420,6 +617,21 @@ export default function Employees() {
           onDeleted={() => {
             setShiftModal(null)
             reloadSchedule()
+          }}
+        />
+      )}
+
+      {accessModalEmployee && (
+        <AccessModal
+          employee={accessModalEmployee}
+          users={users}
+          linkedUserIds={linkedUserIds}
+          venueId={venueId}
+          onClose={() => setAccessModalEmployee(null)}
+          onChanged={() => {
+            loadEmployees()
+            loadUsers()
+            setAccessModalEmployee(null)
           }}
         />
       )}

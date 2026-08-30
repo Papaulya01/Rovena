@@ -62,8 +62,8 @@ export function createEmployee(venueId, payload) {
   const db = getDb()
   const info = db
     .prepare(`
-      INSERT INTO employees (venue_id, full_name, position, phone, salary_type, salary_rate, hired_at, is_active)
-      VALUES (@venue_id, @full_name, @position, @phone, @salary_type, @salary_rate, @hired_at, @is_active)
+      INSERT INTO employees (venue_id, full_name, position, phone, salary_type, salary_rate, hired_at, is_active, user_id)
+      VALUES (@venue_id, @full_name, @position, @phone, @salary_type, @salary_rate, @hired_at, @is_active, @user_id)
     `)
     .run({
       venue_id: venueId,
@@ -73,6 +73,7 @@ export function createEmployee(venueId, payload) {
       salary_rate: 0,
       hired_at: null,
       is_active: 1,
+      user_id: null,
       ...payload
     })
   return db.prepare(`SELECT * FROM employees WHERE id = ?`).get(info.lastInsertRowid)
