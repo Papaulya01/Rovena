@@ -187,6 +187,10 @@ export function registerIpcHandlers() {
   ipcMain.handle('tables:update', (_e, { id, ...payload }) => repo.updateTable(id, payload))
   ipcMain.handle('tables:delete', (_e, id) => repo.deleteTable(id))
   ipcMain.handle('tables:statuses', () => repo.tableStatuses(currentVenueId()))
+  ipcMain.handle('tables:close', (_e, id) => {
+    requireRole('admin', 'cashier')
+    return repo.closeTable(id)
+  })
 
   // ---------- Menu (catalog) ----------
   ipcMain.handle('menu:categories:list', () => repo.listCategories(currentVenueId()))

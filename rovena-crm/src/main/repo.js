@@ -276,6 +276,24 @@ export function updateTable(id, payload) {
   return db.prepare(`SELECT * FROM tables WHERE id = ?`).get(id)
 }
 
+/**
+ * Гость ушёл, стол пора освободить — закрывает все открытые заказы (new/processing
+ * → done) и активные брони (new/confirmed → done) на этот стол. Нужно отдельным
+ * действием, а не только через "Готово" по заказу: у брони без даты окончания
+ * (date_to = null) нет естественного момента, когда она сама перестаёт считаться
+ * текущей — без этого стол мог бы навсегда остаться "занят".
+ */
+export function closeTable(tableId) {
+  const db = getDb()
+  const orders = db
+    .prepare(`UPDATE orders SET status = 'done', updated_at = datetime('now') WHERE table_id = ? AND status IN ('new', 'processing')`)
+    .run(tableId)
+  const bookings = db
+    .prepare(`UPDATE bookings SET status = 'done', updated_at = datetime('now') WHERE table_id = ? AND status IN ('new', 'confirmed')`)
+    .run(tableId)
+  return { tableId, ordersClosed: orders.changes, bookingsClosed: bookings.changes }
+}
+
 export function deleteTable(id) {
   getDb().prepare(`DELETE FROM tables WHERE id = ?`).run(id)
   return { id }

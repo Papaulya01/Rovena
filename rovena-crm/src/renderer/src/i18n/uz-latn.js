@@ -101,6 +101,7 @@ export default {
       cancelled: 'Bekor qilingan'
     },
     bookingNoName: 'ismsiz',
+    closeTable: "✕ Stolni yopish",
     deliveryLabel: "🚚 Yetkazib berish",
     confirmDelivery: 'Tasdiqlash'
   },

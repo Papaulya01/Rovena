@@ -630,6 +630,12 @@ input[type='radio']:disabled {
   padding: 12px 14px;
   background: var(--surface);
   border-left-width: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.table-card:active {
+  transform: scale(0.98);
 }
 
 .table-card.free {
@@ -663,6 +669,29 @@ input[type='radio']:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.table-card-close-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid var(--expense);
+  background: none;
+  color: var(--expense);
+  border-radius: 8px;
+  padding: 6px 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cashier-shell .table-card-close-btn {
+  min-height: 36px;
+}
+
+.table-card-close-btn:hover {
+  background: var(--expense);
+  color: #fff;
 }
 
 .table-card-status {
@@ -1063,6 +1092,7 @@ input[type='radio']:disabled {
 .table-card.selected {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+  box-shadow: 0 2px 8px rgba(201, 138, 62, 0.25);
 }
 
 .menu-pick-category {

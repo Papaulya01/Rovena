@@ -101,6 +101,7 @@ export default {
       cancelled: 'Бекор қилинган'
     },
     bookingNoName: 'исмсиз',
+    closeTable: '✕ Столни ёпиш',
     deliveryLabel: '🚚 Етказиб бериш',
     confirmDelivery: 'Тасдиқлаш'
   },

@@ -57,7 +57,8 @@ const api = {
     create: (payload) => ipcRenderer.invoke('tables:create', payload),
     update: (payload) => ipcRenderer.invoke('tables:update', payload),
     delete: (id) => ipcRenderer.invoke('tables:delete', id),
-    statuses: () => ipcRenderer.invoke('tables:statuses')
+    statuses: () => ipcRenderer.invoke('tables:statuses'),
+    close: (id) => ipcRenderer.invoke('tables:close', id)
   },
   menu: {
     categories: {

@@ -7,7 +7,7 @@ import LanguageButtons from '../components/LanguageButtons.jsx'
 import { buildReceiptHtml } from '../utils/receipt.js'
 import { useI18n } from '../i18n/index.jsx'
 
-function OpenShiftScreen({ onOpened }) {
+function OpenShiftScreen({ onOpened, onLogout }) {
   const { t } = useI18n()
   const [startingCash, setStartingCash] = useState('')
   const [busy, setBusy] = useState(false)
@@ -49,6 +49,9 @@ function OpenShiftScreen({ onOpened }) {
             {busy ? t('cashier.opening') : t('cashier.openShift')}
           </button>
         </form>
+        <button className="logout-link" onClick={onLogout} style={{ display: 'block', margin: '14px auto 0' }}>
+          {t('common.logout')}
+        </button>
       </div>
     </div>
   )
@@ -225,8 +228,14 @@ export default function CashierPanel({ session, onLogout }) {
     loadAll()
   }
 
+  async function closeTable(id) {
+    await window.rovena.tables.close(id)
+    if (String(id) === String(selectedTableId)) setSelectedTableId('')
+    loadAll()
+  }
+
   if (shift === undefined) return null
-  if (!shift) return <OpenShiftScreen onOpened={setShift} />
+  if (!shift) return <OpenShiftScreen onOpened={setShift} onLogout={onLogout} />
 
   return (
     <div className="cashier-shell">
@@ -281,6 +290,18 @@ export default function CashierPanel({ session, onLogout }) {
                     {(tb.current || tb.next).client_name || t('cashier.bookingNoName')} ·{' '}
                     {formatDateTime((tb.current || tb.next).date_from)}
                   </div>
+                )}
+                {tb.status !== 'free' && (
+                  <button
+                    type="button"
+                    className="table-card-close-btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      closeTable(tb.id)
+                    }}
+                  >
+                    {t('cashier.closeTable')}
+                  </button>
                 )}
               </div>
             ))}

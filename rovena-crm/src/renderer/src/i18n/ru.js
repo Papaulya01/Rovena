@@ -101,6 +101,7 @@ export default {
       cancelled: 'Отменён'
     },
     bookingNoName: 'без имени',
+    closeTable: '✕ Закрыть стол',
     deliveryLabel: '🚚 Доставка',
     confirmDelivery: 'Подтвердить'
   },

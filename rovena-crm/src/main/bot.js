@@ -124,7 +124,8 @@ function freshSession(customer) {
     regName: null,
     currentCategoryId: null,
     menuMessageId: null,
-    cancelBookingId: null
+    cancelBookingId: null,
+    pendingAction: null
   }
 }
 
@@ -172,6 +173,7 @@ async function showMainMenu(chatId, session) {
   session.currentCategoryId = null
   session.menuMessageId = null
   session.cancelBookingId = null
+  session.pendingAction = null
   await sendMessage(chatId, tr(session, 'backToMenu'), { reply_markup: mainMenuKeyboard(session) })
 }
 
@@ -188,6 +190,11 @@ async function sendLangPrompt(chatId) {
 }
 
 // ---------- Регистрация ----------
+
+function isRegistered(chatId) {
+  const c = repo.getBotCustomer(chatId)
+  return !!(c?.full_name && c?.phone)
+}
 
 async function startRegistration(chatId, session) {
   const customer = repo.getBotCustomer(chatId)
@@ -220,6 +227,16 @@ async function finishRegistration(chatId, session, phone) {
   await sendMessage(chatId, tr(session, 'regDone', { name: session.regName, phone }), {
     reply_markup: { remove_keyboard: true }
   })
+  const pending = session.pendingAction
+  session.pendingAction = null
+  if (pending === 'order') {
+    await startOrder(chatId, session)
+    return
+  }
+  if (pending === 'book') {
+    await startBookingEntry(chatId, session)
+    return
+  }
   await showMainMenu(chatId, session)
 }
 
@@ -785,10 +802,22 @@ async function finalizeConfirm(chatId, session, callbackId) {
 
 async function tryHandleQuickButton(chatId, session, text) {
   if (text === tr(session, 'btnOrder')) {
+    if (!isRegistered(chatId)) {
+      session.pendingAction = 'order'
+      await sendMessage(chatId, tr(session, 'needRegistrationBeforeAction'))
+      await startRegistration(chatId, session)
+      return true
+    }
     await startOrder(chatId, session)
     return true
   }
   if (text === tr(session, 'btnBook')) {
+    if (!isRegistered(chatId)) {
+      session.pendingAction = 'book'
+      await sendMessage(chatId, tr(session, 'needRegistrationBeforeAction'))
+      await startRegistration(chatId, session)
+      return true
+    }
     await startBookingEntry(chatId, session)
     return true
   }
@@ -813,6 +842,7 @@ async function tryHandleQuickButton(chatId, session, text) {
     return true
   }
   if (text === tr(session, 'btnRegister')) {
+    session.pendingAction = null
     await startRegistration(chatId, session)
     return true
   }
