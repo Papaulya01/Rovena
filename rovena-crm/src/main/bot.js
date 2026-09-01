@@ -1151,11 +1151,15 @@ export async function notifyOrderStatus(order, status) {
   const lang = customer?.language || 'ru'
   const key =
     status === 'done'
-      ? 'statusUpdateDone'
+      ? order.delivery
+        ? 'statusUpdateDeliveryDone'
+        : 'statusUpdateDone'
       : status === 'cancelled'
         ? 'statusUpdateCancelled'
         : status === 'processing'
-          ? 'statusUpdateProcessing'
+          ? order.delivery
+            ? 'statusUpdateDeliveryProcessing'
+            : 'statusUpdateProcessing'
           : null
   if (!key) return
   await sendMessage(order.bot_chat_id, t(lang, key, { id: order.id })).catch((e) =>

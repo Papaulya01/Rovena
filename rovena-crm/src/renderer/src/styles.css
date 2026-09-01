@@ -1087,6 +1087,79 @@ input[type='radio']:disabled {
 .cashier-col {
   overflow-y: auto;
   min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cashier-quick-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.cashier-quick-btn {
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cashier-picker-card {
+  max-width: 520px;
+  width: 100%;
+  max-height: 82vh;
+  overflow-y: auto;
+}
+
+.cashier-search-results {
+  max-height: 45vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-search-row .menu-pick-item {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.menu-search-row.unavailable .menu-pick-item {
+  opacity: 0.55;
+}
+
+.menu-search-unavailable-badge {
+  display: block;
+  font-size: 10.5px;
+  color: var(--expense);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.menu-search-toggle-btn {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.cashier-search-cart-summary {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
 }
 
 .table-card.selected {

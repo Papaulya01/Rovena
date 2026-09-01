@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { formatMoney, formatPriceInput, unformatPrice, formatDateTime } from '../utils/format.js'
-import Select from '../components/Select.jsx'
 import LiveClock from '../components/LiveClock.jsx'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import LanguageButtons from '../components/LanguageButtons.jsx'
@@ -138,12 +137,17 @@ export default function CashierPanel({ session, onLogout }) {
   const [printerSettings, setPrinterSettings] = useState(null)
   const [taxSettings, setTaxSettings] = useState(null)
   const [printingId, setPrintingId] = useState(null)
+  const [showTablePicker, setShowTablePicker] = useState(false)
+  const [showMenuSearch, setShowMenuSearch] = useState(false)
+  const [menuSearchQuery, setMenuSearchQuery] = useState('')
+
+  const activeMenuItems = menuItems.filter((i) => i.is_active)
 
   const loadAll = () => {
     window.rovena.shift.current().then((s) => setShift(s ?? null))
     window.rovena.tables.statuses().then(setTableStatuses)
     window.rovena.menu.categories.list().then(setCategories)
-    window.rovena.menu.items.list().then((items) => setMenuItems(items.filter((i) => i.is_active)))
+    window.rovena.menu.items.list().then(setMenuItems)
     window.rovena.cashier.currentOrders().then(setShiftOrders)
   }
 
@@ -177,6 +181,11 @@ export default function CashierPanel({ session, onLogout }) {
     }
   }
 
+  async function toggleItemAvailability(item) {
+    await window.rovena.menu.items.update({ id: item.id, is_active: item.is_active ? 0 : 1 })
+    loadAll()
+  }
+
   function addToCart(item) {
     setCart((prev) => {
       const existing = prev.find((c) => c.menu_item_id === item.id)
@@ -196,6 +205,10 @@ export default function CashierPanel({ session, onLogout }) {
   }
 
   const cartTotal = cart.reduce((sum, c) => sum + c.qty * c.price, 0)
+  const selectedTable = tableStatuses.find((tb) => String(tb.id) === String(selectedTableId))
+  const menuSearchResults = menuSearchQuery.trim()
+    ? menuItems.filter((i) => i.name.toLowerCase().includes(menuSearchQuery.trim().toLowerCase()))
+    : menuItems
 
   async function submitOrder() {
     if (cart.length === 0) return
@@ -363,7 +376,7 @@ export default function CashierPanel({ session, onLogout }) {
           <h3 style={{ marginTop: 0 }}>{t('cashier.menu')}</h3>
           <div className="menu-pick-list">
             {categories.map((cat) => {
-              const items = menuItems.filter((i) => i.category_id === cat.id)
+              const items = activeMenuItems.filter((i) => i.category_id === cat.id)
               if (items.length === 0) return null
               return (
                 <div key={cat.id} style={{ marginBottom: 14 }}>
@@ -380,10 +393,10 @@ export default function CashierPanel({ session, onLogout }) {
                 </div>
               )
             })}
-            {menuItems.filter((i) => !i.category_id).length > 0 && (
+            {activeMenuItems.filter((i) => !i.category_id).length > 0 && (
               <div style={{ marginBottom: 14 }}>
                 <div className="menu-pick-category">{t('cashier.noCategoryLabel')}</div>
-                {menuItems
+                {activeMenuItems
                   .filter((i) => !i.category_id)
                   .map((item) => (
                     <button key={item.id} type="button" className="menu-pick-item" onClick={() => addToCart(item)}>
@@ -401,14 +414,13 @@ export default function CashierPanel({ session, onLogout }) {
 
         <section className="cashier-col cashier-cart-col">
           <h3 style={{ marginTop: 0 }}>{t('cashier.currentOrder')}</h3>
-          <div style={{ marginBottom: 12 }}>
-            <label>{t('cashier.table')}</label>
-            <Select
-              value={selectedTableId}
-              onChange={setSelectedTableId}
-              placeholder={t('cashier.noTable')}
-              options={tableStatuses.map((t) => ({ value: String(t.id), label: t.name }))}
-            />
+          <div className="cashier-quick-actions">
+            <button type="button" className="btn secondary cashier-quick-btn" onClick={() => setShowTablePicker(true)}>
+              🪑 {selectedTable ? selectedTable.name : t('cashier.noTable')}
+            </button>
+            <button type="button" className="btn secondary cashier-quick-btn" onClick={() => setShowMenuSearch(true)}>
+              🔍 {t('cashier.searchMenuButton')}
+            </button>
           </div>
           {cart.length === 0 ? (
             <div className="empty-state">{t('cashier.addItemsHint')}</div>
@@ -449,6 +461,108 @@ export default function CashierPanel({ session, onLogout }) {
             setShift(null)
           }}
         />
+      )}
+
+      {showTablePicker && (
+        <div className="modal-overlay" onClick={() => setShowTablePicker(false)}>
+          <div className="card cashier-picker-card" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>{t('cashier.pickTableTitle')}</h3>
+            <div className="table-status-grid">
+              <div
+                className={`table-card free ${!selectedTableId ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelectedTableId('')
+                  setShowTablePicker(false)
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="table-card-name">{t('cashier.noTable')}</div>
+              </div>
+              {tableStatuses.map((tb) => (
+                <div
+                  key={tb.id}
+                  className={`table-card ${tb.status} ${String(tb.id) === String(selectedTableId) ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedTableId(String(tb.id))
+                    setShowTablePicker(false)
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="table-card-name">{tb.name}</div>
+                  <div className="table-card-meta">
+                    {tb.capacity} {t('cashier.peopleShort')}
+                    {tb.zone ? ` · ${tb.zone}` : ''}
+                  </div>
+                  <div className="table-card-status">
+                    {tb.status === 'free' ? t('dashboard.statusFree') : tb.status === 'reserved' ? t('dashboard.statusReserved') : t('dashboard.statusOccupied')}
+                  </div>
+                  {(tb.current || tb.next) && (
+                    <div className="table-card-booking">
+                      {(tb.current || tb.next).client_name || t('cashier.bookingNoName')} ·{' '}
+                      {formatDateTime((tb.current || tb.next).date_from)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button className="btn secondary" type="button" style={{ width: '100%', marginTop: 14 }} onClick={() => setShowTablePicker(false)}>
+              {t('common.close')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showMenuSearch && (
+        <div className="modal-overlay" onClick={() => setShowMenuSearch(false)}>
+          <div className="card cashier-picker-card" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>{t('cashier.searchMenuTitle')}</h3>
+            <input
+              autoFocus
+              value={menuSearchQuery}
+              onChange={(e) => setMenuSearchQuery(e.target.value)}
+              placeholder={t('cashier.searchMenuPlaceholder')}
+              style={{ marginBottom: 12 }}
+            />
+            <div className="cashier-search-results">
+              {menuSearchResults.length === 0 ? (
+                <div className="empty-state">{t('cashier.searchMenuNoResults')}</div>
+              ) : (
+                menuSearchResults.map((item) => (
+                  <div key={item.id} className={`menu-search-row ${!item.is_active ? 'unavailable' : ''}`}>
+                    <button
+                      type="button"
+                      className="menu-pick-item"
+                      disabled={!item.is_active}
+                      onClick={() => addToCart(item)}
+                    >
+                      <span className="menu-pick-item-main">
+                        {item.image && <img src={item.image} alt="" className="menu-pick-item-thumb" />}
+                        <span>
+                          {item.name}
+                          {!item.is_active && <span className="menu-search-unavailable-badge">{t('cashier.itemUnavailable')}</span>}
+                        </span>
+                      </span>
+                      <span>{formatMoney(item.price)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn secondary menu-search-toggle-btn"
+                      onClick={() => toggleItemAvailability(item)}
+                    >
+                      {item.is_active ? t('cashier.markUnavailable') : t('cashier.markAvailable')}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="cashier-search-cart-summary">
+              {t('cashier.orderTotal')}: {cart.reduce((sum, c) => sum + c.qty, 0)} · {formatMoney(cartTotal)}
+            </div>
+            <button className="btn" type="button" style={{ width: '100%', marginTop: 10 }} onClick={() => setShowMenuSearch(false)}>
+              {t('common.close')}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
